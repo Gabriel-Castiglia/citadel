@@ -1,6 +1,6 @@
 # Citadel
 
-Gabriel Castiglia · 9 de noviembre de 2026 · versión 1.0.0 · licencia GPL-2.0
+Gabriel Castiglia · 9 de noviembre de 2026 · versión 1.0.1 · licencia GPL-2.0
 
 [English](README.md) · Español
 
@@ -55,7 +55,8 @@ cd citadel
 ```
 
 `instalar.sh` compila la app, la firma y la copia a `/Applications/Citadel.app`; si hay una copia
-abierta, primero la cierra. La primera vez, el paso de firma crea un certificado propio en tu Mac (ver
+abierta, primero la cierra, y después borra la copia que queda en `build/`, así Spotlight muestra Citadel una
+sola vez. La primera vez, el paso de firma crea un certificado propio en tu Mac (ver
 [Firma](#firma)). Para actualizar después de un `git pull` se corre el mismo comando; las
 conversaciones, las reglas, las memorias y los ajustes se conservan.
 

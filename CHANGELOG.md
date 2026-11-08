@@ -2,6 +2,13 @@
 
 All notable changes to Citadel. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.0.1 - 2026-11-09
+
+### Fixed
+
+- Spotlight and Launchpad listed Citadel twice after installing: `scripts/instalar.sh` now deletes the copy
+  left in `build/` and removes it from the macOS app register.
+
 ## 1.0.0 - 2026-11-09
 
 First release.

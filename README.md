@@ -1,6 +1,6 @@
 # Citadel
 
-Gabriel Castiglia · November 9, 2026 · version 1.0.0 · GPL-2.0 license
+Gabriel Castiglia · November 9, 2026 · version 1.0.1 · GPL-2.0 license
 
 English · [Español](README.es.md)
 
@@ -54,7 +54,7 @@ cd citadel
 ```
 
 `instalar.sh` builds the app, signs it and copies it to `/Applications/Citadel.app`, quitting a running
-copy first. The first time, the signing step creates a certificate of its own on your Mac (see
+copy first, and then deletes the copy left in `build/`, so Spotlight lists Citadel once. The first time, the signing step creates a certificate of its own on your Mac (see
 [Signing](#signing)). Run the same command to update after a `git pull`; conversations, rules,
 memories and settings are kept.
 

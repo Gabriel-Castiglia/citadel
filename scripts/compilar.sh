@@ -12,7 +12,7 @@
 set -euo pipefail
 
 # The version lives here and only here; the app reads it from Info.plist.
-version=1.0.0
+version=1.0.1
 
 root=${0:A:h:h}
 cd $root

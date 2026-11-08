@@ -25,5 +25,10 @@ fi
 rm -rf $target
 ditto $root/build/Citadel.app $target
 codesign --verify $target
+
+# Remove the build copy, so Spotlight and Launchpad list Citadel only once.
+lsregister=/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister
+$lsregister -u $root/build/Citadel.app 2>/dev/null || true
+rm -rf $root/build/Citadel.app
 print "Installed $target"
 codesign -d -r- $target 2>&1 | grep designated
