@@ -1,0 +1,9 @@
+# Build output (scripts/compilar.sh writes build/)
+build/
+
+# Operating system files
+.DS_Store
+._*
+
+# Internal notes (history, build sessions, plans): kept with the working copy, never published
+_internal/
