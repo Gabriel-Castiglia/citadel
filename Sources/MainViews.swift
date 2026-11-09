@@ -209,11 +209,41 @@ struct ChatHeader: View {
                 .font(.system(size: 14, weight: .semibold))
                 .lineLimit(1)
             Spacer()
+            LanguagePicker()
             ModelPicker(model: model)
         }
         .padding(.leading, 20)
         .padding(.trailing, 16)
         .frame(height: 52)
+    }
+}
+
+/// Interface language, shown next to the model so it is easy to find.
+struct LanguagePicker: View {
+    @ObservedObject var lang = L10n.shared
+
+    var body: some View {
+        Menu {
+            ForEach([("en", "English"), ("es", "Español")], id: \.0) { code, name in
+                Button {
+                    lang.language = code
+                } label: {
+                    if lang.language == code { Label(name, systemImage: "checkmark") } else { Text(name) }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "globe")
+                Text(lang.isSpanish ? "Español" : "English")
+            }
+            .font(.system(size: 12, weight: .medium))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(Color.white.opacity(0.08)))
+        .help(tr("Idioma de la interfaz", "Interface language"))
     }
 }
 
@@ -230,10 +260,11 @@ struct ModelPicker: View {
                 Button {
                     model.selectedModel = name
                 } label: {
+                    let title = model.reasoningModels[name] == false ? name + tr("  (sin Razonar)", "  (no Reason)") : name
                     if name == model.selectedModel {
-                        Label(name, systemImage: "checkmark")
+                        Label(title, systemImage: "checkmark")
                     } else {
-                        Text(name)
+                        Text(title)
                     }
                 }
             }
@@ -535,31 +566,27 @@ struct ComposerView: View {
 
                 HStack(spacing: 10) {
                     // A plain button: the system toggle style looks the same on and off in dark mode.
+                    let reasonOn = model.reason && model.canReason
                     Button { model.reason.toggle() } label: {
-                        Label(tr("Razonar", "Reason"), systemImage: model.reason ? "brain.fill" : "brain")
+                        Label(tr("Razonar", "Reason"), systemImage: reasonOn ? "brain.fill" : "brain")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(model.reason ? Color.white : Color.secondary)
+                            .foregroundStyle(reasonOn ? Color.white : Color.secondary)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(Capsule().fill(model.reason ? Color.accentColor : Color.white.opacity(0.08)))
+                            .background(Capsule().fill(reasonOn ? Color.accentColor : Color.white.opacity(0.08)))
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityAddTraits(model.reason ? .isSelected : [])
-                    .help(tr("Más lento (unos 20 a 90 s) pero mucho más preciso en cuentas, conteos, lógica y fechas.",
-                             "Slower (about 20 to 90 s) but much more accurate on math, counting, logic and dates."))
+                    .disabled(!model.canReason)
+                    .opacity(model.canReason ? 1 : 0.45)
+                    .accessibilityAddTraits(reasonOn ? .isSelected : [])
+                    .help(model.canReason
+                          ? tr("Más lento (unos 20 a 90 s) pero mucho más preciso en cuentas, conteos, lógica y fechas.",
+                               "Slower (about 20 to 90 s) but much more accurate on math, counting, logic and dates.")
+                          : tr("\(model.selectedModel) no puede razonar: elige otro modelo para usar Razonar.",
+                               "\(model.selectedModel) cannot reason: choose another model to use Reason."))
 
-                    Menu {
-                        Button("Translate to English:") { model.translate(toEnglish: true) }
-                        Button("Traduce al español:") { model.translate(toEnglish: false) }
-                    } label: {
-                        Label(tr("Traducir", "Translate"), systemImage: "character.bubble")
-                    }
-                    .menuStyle(.borderlessButton)
-                    .controlSize(.small)
-                    .fixedSize()
-
-                    if model.reason {
+                    if reasonOn {
                         Text(tr("Más lento (20 a 90 s), mucho más preciso en cuentas, conteos, lógica y fechas.",
                                 "Slower (20-90 s), much more accurate on math, counting, logic and dates."))
                             .font(.system(size: 11))
@@ -636,12 +663,15 @@ struct StatusLine: View {
 
     private var text: String {
         guard let ok = model.reachable else { return tr("Buscando Ollama…", "Looking for Ollama…") }
+        let remote = Connection.remoteHost
         if !ok {
+            if remote != nil { return model.connectionError ?? OllamaError.unreachable.localizedDescription }
             return tr("Ollama no responde en 127.0.0.1:11434. Solución: brew services start ollama",
                       "Ollama is not reachable at 127.0.0.1:11434. Fix: brew services start ollama")
         }
         let n = model.models.count
-        var parts = [tr("Ollama conectado", "Ollama connected") + " · \(n) " + (n == 1 ? tr("modelo", "model") : tr("modelos", "models"))]
+        let place = remote.map { tr("Ollama en \($0) (SSH)", "Ollama on \($0) (SSH)") } ?? tr("Ollama conectado", "Ollama connected")
+        var parts = [place + " · \(n) " + (n == 1 ? tr("modelo", "model") : tr("modelos", "models"))]
         if model.isDraftingMemory {
             parts.append(tr("Escribiendo la memoria…", "Writing the memory…"))
         } else if model.isGenerating {

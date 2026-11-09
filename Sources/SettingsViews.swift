@@ -68,6 +68,8 @@ struct SettingsView: View {
                 .tabItem { Label(tr("Memorias", "Memories"), systemImage: "bookmark") }
             RulesSettings()
                 .tabItem { Label(tr("Reglas", "Rules"), systemImage: "list.bullet.rectangle") }
+            OllamaSettings()
+                .tabItem { Label("Ollama", systemImage: "network") }
         }
         .frame(minWidth: 620, idealWidth: 680, minHeight: 460, idealHeight: 540)
         .preferredColorScheme(.dark)
@@ -157,6 +159,69 @@ struct GeneralSettings: View {
             Text(tr("Se borra el archivo \(state.deleting?.file ?? "") y su línea del índice.",
                     "The file \(state.deleting?.file ?? "") and its index line will be removed."))
         }
+    }
+}
+
+/// Where Ollama runs: this Mac, or another computer through an SSH tunnel.
+@MainActor
+final class OllamaSettingsState: ObservableObject {
+    @Published var remote = UserDefaults.standard.bool(forKey: "useSSH")
+    @Published var host = UserDefaults.standard.string(forKey: "sshHost") ?? ""
+    @Published var result = ""
+    @Published var busy = false
+
+    func apply() async {
+        let trimmed = host.trimmingCharacters(in: .whitespaces)
+        UserDefaults.standard.set(trimmed, forKey: "sshHost")
+        UserDefaults.standard.set(remote && !trimmed.isEmpty, forKey: "useSSH")
+        busy = true
+        result = tr("Conectando…", "Connecting…")
+        await Connection.shared.stop()
+        do {
+            let models = try await OllamaClient().listModels()
+            result = tr("Conectado: \(models.count) modelo(s). ", "Connected: \(models.count) model(s). ") + models.joined(separator: ", ")
+        } catch {
+            result = error.localizedDescription
+        }
+        busy = false
+        await ChatModel.shared.refreshStatus()
+    }
+}
+
+struct OllamaSettings: View {
+    @StateObject private var state = OllamaSettingsState()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(tr("Dónde corre Ollama", "Where Ollama runs"))
+                .font(.system(size: 13, weight: .semibold))
+            Picker("", selection: $state.remote) {
+                Text(tr("En esta Mac (127.0.0.1:11434)", "On this Mac (127.0.0.1:11434)")).tag(false)
+                Text(tr("En otra computadora, por SSH", "On another computer, through SSH")).tag(true)
+            }
+            .pickerStyle(.radioGroup)
+            .labelsHidden()
+            TextField(tr("usuario@equipo, o un Host de ~/.ssh/config", "user@host, or a Host from ~/.ssh/config"), text: $state.host)
+                .font(.system(size: 12, design: .monospaced))
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 360)
+                .padding(.leading, 20)
+                .disabled(!state.remote)
+            Text(tr("Citadel abre un túnel con el ssh de macOS hasta el puerto 11434 de esa computadora y lo cierra al salir. Usa tu llave SSH: nunca pide contraseña. El manual explica cómo preparar las dos computadoras.",
+                    "Citadel opens a tunnel with the macOS ssh command to port 11434 of that computer and closes it on quit. It uses your SSH key and never asks for a password. The manual explains how to prepare both computers."))
+                .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 12) {
+                Button(tr("Aplicar y probar", "Apply and test")) { Task { await state.apply() } }
+                    .disabled(state.busy)
+                Text(state.result)
+                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+        }
+        .padding(20)
     }
 }
 

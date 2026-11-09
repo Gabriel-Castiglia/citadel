@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Citadel installer package. scripts/paquete.sh fills in @VERSION@.
+     Copyright (C) 2026 Gabriel Castiglia. Licensed under the GNU GPL, version 2 only.
+     SPDX-License-Identifier: GPL-2.0-only -->
+<installer-gui-script minSpecVersion="2">
+    <title>SU_TITLE</title>
+    <welcome file="Welcome.html" mime-type="text/html"/>
+    <license file="License.txt" mime-type="text/plain"/>
+    <conclusion file="Conclusion.html" mime-type="text/html"/>
+    <options customize="never" require-scripts="false" hostArchitectures="arm64"/>
+    <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="14.0"/>
+        </allowed-os-versions>
+    </volume-check>
+    <choices-outline>
+        <line choice="default">
+            <line choice="io.github.gabriel-castiglia.citadel.pkg"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="io.github.gabriel-castiglia.citadel.pkg" visible="false">
+        <pkg-ref id="io.github.gabriel-castiglia.citadel.pkg"/>
+    </choice>
+    <pkg-ref id="io.github.gabriel-castiglia.citadel.pkg" version="@VERSION@" onConclusion="none">Citadel-component.pkg</pkg-ref>
+</installer-gui-script>

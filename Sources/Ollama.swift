@@ -40,14 +40,20 @@ struct ChatChunk: Decodable {
 
 enum OllamaError: LocalizedError {
     case unreachable
+    case remote(String)
     case server(String)
     case badResponse
 
     var errorDescription: String? {
         switch self {
         case .unreachable:
+            if let host = Connection.remoteHost {
+                return tr("Ollama no responde en \(host) (por SSH).", "Ollama is not reachable on \(host) (through SSH).")
+            }
             return tr("No se puede conectar con Ollama. Prueba: brew services start ollama",
                       "Cannot reach Ollama. Try: brew services start ollama")
+        case .remote(let s):
+            return s
         case .server(let s):
             return "Ollama: \(s)"
         case .badResponse:
@@ -58,7 +64,10 @@ enum OllamaError: LocalizedError {
 
 /// Minimal client for the local Ollama HTTP API.
 struct OllamaClient {
-    var base: URL = AppInfo.ollamaBase
+    /// Base address on this Mac or through the SSH tunnel (see Connection).
+    private func url(_ path: String) async throws -> URL {
+        try await Connection.shared.base().appendingPathComponent(path)
+    }
 
     private struct TagsResponse: Decodable {
         struct Model: Decodable { var name: String }
@@ -67,7 +76,7 @@ struct OllamaClient {
 
     /// Installed models (/api/tags), sorted by name.
     func listModels() async throws -> [String] {
-        var req = URLRequest(url: base.appendingPathComponent("api/tags"))
+        var req = URLRequest(url: try await url("api/tags"))
         req.timeoutInterval = 4
         let data: Data
         do { (data, _) = try await URLSession.shared.data(for: req) } catch { throw OllamaError.unreachable }
@@ -75,9 +84,22 @@ struct OllamaClient {
         return decoded.models.map(\.name).sorted()
     }
 
+    /// What a model can do (/api/show), such as "completion" and "thinking".
+    func capabilities(of model: String) async throws -> [String] {
+        var req = URLRequest(url: try await url("api/show"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["model": model])
+        req.timeoutInterval = 4
+        let data: Data
+        do { (data, _) = try await URLSession.shared.data(for: req) } catch { throw OllamaError.unreachable }
+        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return object?["capabilities"] as? [String] ?? []
+    }
+
     /// Models currently loaded in memory (/api/ps).
     func loadedModels() async throws -> [String] {
-        var req = URLRequest(url: base.appendingPathComponent("api/ps"))
+        var req = URLRequest(url: try await url("api/ps"))
         req.timeoutInterval = 4
         let data: Data
         do { (data, _) = try await URLSession.shared.data(for: req) } catch { throw OllamaError.unreachable }
@@ -86,7 +108,7 @@ struct OllamaClient {
     }
 
     private func chatRequest(model: String, messages: [WireMessage], think: Bool, stream: Bool,
-                             numPredict: Int, jsonFormat: Bool) throws -> URLRequest {
+                             numPredict: Int, jsonFormat: Bool) async throws -> URLRequest {
         var body: [String: Any] = [
             "model": model,
             "messages": messages.map { ["role": $0.role, "content": $0.content] },
@@ -95,7 +117,7 @@ struct OllamaClient {
             "options": ["num_predict": numPredict],
         ]
         if jsonFormat { body["format"] = "json" }
-        var req = URLRequest(url: base.appendingPathComponent("api/chat"))
+        var req = URLRequest(url: try await url("api/chat"))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -112,7 +134,7 @@ struct OllamaClient {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let req = try chatRequest(model: model, messages: messages, think: think,
+                    let req = try await chatRequest(model: model, messages: messages, think: think,
                                               stream: true, numPredict: numPredict, jsonFormat: false)
                     let bytes: URLSession.AsyncBytes
                     let response: URLResponse
@@ -144,7 +166,7 @@ struct OllamaClient {
     func complete(model: String, messages: [WireMessage], think: Bool, numPredict: Int,
                   jsonFormat: Bool) async throws -> String
     {
-        let req = try chatRequest(model: model, messages: messages, think: think, stream: false,
+        let req = try await chatRequest(model: model, messages: messages, think: think, stream: false,
                                   numPredict: numPredict, jsonFormat: jsonFormat)
         let data: Data
         do { (data, _) = try await URLSession.shared.data(for: req) } catch {

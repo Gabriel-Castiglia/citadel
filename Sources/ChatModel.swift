@@ -38,7 +38,13 @@ final class ChatModel: ObservableObject {
     @Published var selectedModel: String {
         didSet { UserDefaults.standard.set(selectedModel, forKey: "model") }
     }
+    /// Whether each installed model can reason, from its Ollama capabilities.
+    @Published var reasoningModels: [String: Bool] = [:]
+    /// Reason applies only to models that can reason; unknown models are given the benefit of the doubt.
+    var canReason: Bool { reasoningModels[selectedModel] ?? true }
     @Published var reachable: Bool? = nil
+    /// Why the last connection failed (SSH errors included), for the status line.
+    @Published var connectionError: String?
     @Published var loadedModels: [String] = []
     @Published var isGenerating = false
     @Published var receivedFirstToken = false
@@ -90,9 +96,14 @@ final class ChatModel: ObservableObject {
             if !list.isEmpty, !list.contains(selectedModel) {
                 selectedModel = list.contains(AppInfo.defaultModel) ? AppInfo.defaultModel : list[0]
             }
+            for name in list where reasoningModels[name] == nil {
+                if let caps = try? await client.capabilities(of: name) { reasoningModels[name] = caps.contains("thinking") }
+            }
             loadedModels = (try? await client.loadedModels()) ?? []
+            connectionError = nil
         } catch {
             reachable = false
+            connectionError = error.localizedDescription
             loadedModels = []
         }
     }
@@ -190,17 +201,6 @@ final class ChatModel: ObservableObject {
         attachments.append(Attachment(name: url.lastPathComponent, text: text))
     }
 
-    /// Fills the composer with a translation request for the attached text.
-    func translate(toEnglish: Bool) {
-        let prefix = toEnglish ? "Translate to English:" : "Traduce al español:"
-        let body = attachments.map(\.text).joined(separator: "\n\n").trimmed
-        let typed = composer.trimmed
-        let existing = (typed.hasPrefix("Translate to English:") || typed.hasPrefix("Traduce al español:")) ? "" : typed
-        let text = body.isEmpty ? existing : body
-        composer = text.isEmpty ? prefix + " " : prefix + "\n\n" + text
-        if !body.isEmpty { attachments.removeAll() }
-    }
-
     func send() {
         let text = composer.trimmed
         guard canSend, let id = selectedID else { return }
@@ -273,7 +273,7 @@ final class ChatModel: ObservableObject {
 
     private func runAnswer(in id: UUID) {
         guard let conversation = conversations.first(where: { $0.id == id }) else { return }
-        let think = reason
+        let think = reason && canReason
         let model = selectedModel
         let wire = Self.wireMessages(for: conversation)
         var answer = ChatMessage(role: .assistant, content: "")
@@ -343,7 +343,7 @@ final class ChatModel: ObservableObject {
                     self.mutateMessage(answerID, in: id) { $0.stopped = true }
                 } else {
                     self.append(ChatMessage(role: .notice, content: error.localizedDescription), to: id)
-                    if (error as? OllamaError).map({ if case .unreachable = $0 { return true } else { return false } }) == true {
+                    if (error as? OllamaError).map({ switch $0 { case .unreachable, .remote: return true; default: return false } }) == true {
                         self.reachable = false
                     }
                 }

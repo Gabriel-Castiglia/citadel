@@ -14,6 +14,13 @@ here=${0:A:h}
 root=${here:h}
 target=/Applications/Citadel.app
 
+# A copy installed by the package belongs to root; this script, run without sudo, cannot replace it.
+if [[ -d $target && ! -O $target ]]; then
+  print -u2 "$target was installed by the package and belongs to $(stat -f %Su $target)."
+  print -u2 "Update it with a newer package, or run: sudo rm -rf $target && $0"
+  exit 1
+fi
+
 $here/compilar.sh
 $here/firma.sh $root/build/Citadel.app
 

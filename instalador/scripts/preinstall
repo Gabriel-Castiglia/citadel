@@ -1,0 +1,13 @@
+#!/bin/sh
+# Citadel package: quits a running Citadel before it is replaced.
+# Copyright (C) 2026 Gabriel Castiglia. Licensed under the GNU GPL, version 2 only.
+# SPDX-License-Identifier: GPL-2.0-only
+user=$(/usr/bin/stat -f %Su /dev/console)
+if /usr/bin/pgrep -xq Citadel && [ -n "$user" ] && [ "$user" != root ]; then
+    uid=$(/usr/bin/id -u "$user")
+    /bin/launchctl asuser "$uid" /usr/bin/sudo -u "$user" /usr/bin/osascript \
+        -e 'tell application id "io.github.gabriel-castiglia.citadel" to quit' >/dev/null 2>&1
+    sleep 2
+fi
+/usr/bin/pkill -x Citadel 2>/dev/null
+exit 0

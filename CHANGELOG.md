@@ -2,6 +2,27 @@
 
 All notable changes to Citadel. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.1.0 - 2026-11-09
+
+### Added
+
+- Installer package, `Citadel-<version>.pkg`, in English and Spanish, built by `scripts/paquete.sh`.
+- Globe button at the top right, next to the model menu, that shows and switches the interface
+  language.
+- Ollama on another computer through SSH: Settings → Ollama opens a tunnel with `/usr/bin/ssh` to
+  port 11434 of that computer and closes it on quit.
+- Models that cannot reason are marked "(no Reason)" in the model menu, and the Reason button is
+  dimmed while one of them is selected.
+
+### Changed
+
+- The menus that macOS adds to every app (Edit, View, Window, Help) follow the interface language
+  from the next launch.
+
+### Removed
+
+- The Translate menu.
+
 ## 1.0.1 - 2026-11-09
 
 ### Fixed

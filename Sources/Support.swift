@@ -32,16 +32,26 @@ enum AppInfo {
 // MARK: - Interface language
 
 /// Holds the interface language ("en" or "es"). English on first launch.
+/// AppleLanguages makes the standard menus (Edit, View, Window, Help) follow the same choice;
+/// macOS reads it at launch, so those menus change from the next launch on.
 final class L10n: ObservableObject {
     static let shared = L10n()
 
     @Published var language: String {
-        didSet { UserDefaults.standard.set(language, forKey: "language") }
+        didSet { save() }
     }
 
     private init() {
         let saved = UserDefaults.standard.string(forKey: "language")
         language = (saved == "es") ? "es" : "en"
+        // A `-language` argument (screenshots, tests) applies to this run only.
+        let arguments = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+        if arguments["language"] == nil { save() }
+    }
+
+    private func save() {
+        UserDefaults.standard.set(language, forKey: "language")
+        UserDefaults.standard.set([language], forKey: "AppleLanguages")
     }
 
     var isSpanish: Bool { language == "es" }

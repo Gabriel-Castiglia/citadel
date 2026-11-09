@@ -1,6 +1,6 @@
 # Citadel
 
-Gabriel Castiglia · November 9, 2026 · version 1.0.1 · GPL-2.0 license
+Gabriel Castiglia · November 9, 2026 · version 1.1.0 · GPL-2.0 license
 
 English · [Español](README.es.md)
 
@@ -10,7 +10,8 @@ PDF manual: [`docs/Citadel-manual-en.pdf`](docs/Citadel-manual-en.pdf)
 
 Citadel is a chat app for macOS that talks to language models running on the same Mac through
 [Ollama](https://ollama.com). Nothing you write leaves the computer: the app only connects to Ollama
-at `127.0.0.1:11434`. It is written in Swift and SwiftUI, builds with the Apple Command Line Tools
+at `127.0.0.1:11434`, unless you choose to reach Ollama on another computer of yours through SSH (see
+[Ollama on another computer](#ollama-on-another-computer)). It is written in Swift and SwiftUI, builds with the Apple Command Line Tools
 alone (no Xcode), and its interface is in English and Spanish. A Windows version with the same
 features lives in its own repository, <https://github.com/Gabriel-Castiglia/citadel-windows>.
 
@@ -31,7 +32,7 @@ when you ask for it, one of your saved memories.
   ollama pull qwen3:8b
   ```
 
-- To build: the Apple Command Line Tools (`xcode-select --install`), which bring Swift 6. To build the
+- To build from source: the Apple Command Line Tools (`xcode-select --install`), which bring Swift 6. To build the
   PDF manuals as well: pandoc (`brew install pandoc`) and Google Chrome.
 
 Citadel starts with the model `qwen3-8b-32k:latest` selected when it is installed, and otherwise with
@@ -47,6 +48,26 @@ second. Ollama loads it with the first message and unloads it after 5 minutes wi
 
 ## Installation
 
+### With the installer package
+
+Download `Citadel-<version>.pkg` from the
+[releases page](https://github.com/Gabriel-Castiglia/citadel/releases) and open it. The installer is
+in English or Spanish, following the language of the Mac; it shows a welcome page, the license, and
+installs `Citadel.app` in `/Applications`, quitting a running copy first. Installing a newer package
+over an older one updates Citadel; conversations, rules, memories and settings are kept.
+
+The package is not signed with an Apple Developer ID, so the first time macOS refuses to open it
+("Apple could not verify…"). Open System Settings → Privacy & Security, scroll to the message about
+`Citadel-<version>.pkg` and click Open Anyway, then confirm. This is needed once per downloaded
+package; the installed app opens normally. The `SHA256SUMS.txt` file of each release lets you check
+the download first:
+
+```
+shasum -a 256 Citadel-1.1.0.pkg
+```
+
+### From source
+
 ```
 git clone https://github.com/Gabriel-Castiglia/citadel.git
 cd citadel
@@ -54,11 +75,15 @@ cd citadel
 ```
 
 `instalar.sh` builds the app, signs it and copies it to `/Applications/Citadel.app`, quitting a running
-copy first, and then deletes the copy left in `build/`, so Spotlight lists Citadel once. The first time, the signing step creates a certificate of its own on your Mac (see
-[Signing](#signing)). Run the same command to update after a `git pull`; conversations, rules,
-memories and settings are kept.
+copy first, and then deletes the copy left in `build/`, so Spotlight lists Citadel once. The first
+time, the signing step creates a certificate of its own on your Mac (see [Signing](#signing)). Run the
+same command to update after a `git pull`; conversations, rules, memories and settings are kept.
+`./scripts/paquete.sh` builds the installer package instead, in `build/`. A copy installed by the
+package belongs to root, so `instalar.sh` stops and says how to remove it first.
 
-To uninstall, delete `/Applications/Citadel.app`. The data stays in
+### Uninstalling
+
+Drag `/Applications/Citadel.app` to the Trash. The data stays in
 `~/Library/Application Support/Citadel` and the settings in the `io.github.gabriel-castiglia.citadel`
 preferences domain; to remove them too:
 
@@ -69,8 +94,10 @@ security delete-keychain ~/Library/Keychains/citadel-signing.keychain-db
 security delete-generic-password -s citadel-local-signing
 ```
 
-The last two lines remove the signing certificate and its keychain password. Without them, a later
-installation reuses the same certificate.
+The last two lines remove the signing certificate and its keychain password, which exist only on a
+Mac that built Citadel from source. Without them, a later build reuses the same certificate. After
+installing from the package, `sudo pkgutil --forget io.github.gabriel-castiglia.citadel.pkg` also
+clears the record macOS keeps of the installation.
 
 ## Using Citadel
 
@@ -88,20 +115,41 @@ title is the first line of the first message. Right-click a conversation to rena
 deleting asks first and removes its file from disk. The search field filters by title, ignoring case
 and accents.
 
-### Model and status
+### Models
 
-The model menu at the top right lists the models installed in Ollama, and "Refresh list" reads them
-again. The line under the text box says whether Ollama answers, whether the model is loaded or will
-load with the next message, what the model is doing (loading, reasoning, writing) with the seconds
-elapsed, and the speed of the last answer. When Ollama does not answer, the same line gives the fix:
-`brew services start ollama`.
+The model menu at the top right lists every model installed in Ollama; pick one and the next message
+goes to it. The choice is remembered, and each answer shows under it the model that wrote it, so one
+conversation can compare several models. "Refresh list" reads the list again after installing a
+model from Terminal:
+
+```
+ollama pull gemma3:12b
+```
+
+Any chat model in the [Ollama library](https://ollama.com/library) works. Models that cannot reason
+(Ollama does not list "thinking" among their capabilities) appear in the menu with "(no Reason)", and
+with one of them selected the Reason button is dimmed and its tooltip says why. Citadel asks Ollama
+for each model's capabilities when it lists them, so a new model is classified as soon as it appears.
+
+Ollama gives each model a context window of a few thousand tokens unless the model says otherwise.
+For long conversations or large attachments, create a variant with a bigger window, as in
+[Requirements](#requirements), and select it in the menu. A larger window needs more memory.
+
+### Status
+
+The line under the text box says whether Ollama answers and where (on this Mac, or on another
+computer through SSH), whether the model is loaded or will load with the next message, what the
+model is doing (loading, reasoning, writing) with the seconds elapsed, and the speed of the last
+answer. When Ollama does not answer, the same line gives the fix: `brew services start ollama`, or
+the SSH error.
 
 ### Reason
 
 The Reason button makes the model think before it answers. Its reasoning goes in a dimmed block above the
 answer. The block stays folded, showing the latest line while the model thinks, and opens with a click. Reason is slower
 and much more accurate on arithmetic, counting letters or words, logic and dates. Without it, the
-model answers at once and is fine for explanations, writing, translation and code.
+model answers at once and is fine for explanations, writing, translation and code. Reason is only
+available with models that can reason (see [Models](#models)).
 
 With Reason on, an answer may write up to 8,000 tokens; with it off, up to 3,000. See
 [Technical notes](#technical-notes) for the measurements behind these choices.
@@ -111,12 +159,10 @@ With Reason on, an answer may write up to 8,000 tokens; with it off, up to 3,000
 While an answer is being written, the send button becomes a Stop button (also ⌘.). It closes the
 connection and Ollama stops generating; what was written so far stays, marked "Stopped".
 
-### Attachments and translation
+### Attachments
 
 Drag a `.txt` or `.md` file onto the text box to attach its text to the next message; a chip shows the
-file name and its length, with a button to remove it. The Translate menu fills the box with
-"Translate to English:" or "Traduce al español:" followed by the attached text, ready to send. The
-rules ask the model to keep code, paths, commands, numbers and names unchanged.
+file name and its length, with a button to remove it.
 
 ### Memories
 
@@ -146,7 +192,7 @@ anything, so the model only drafts the text and the app does the writing and the
 
 ### Settings
 
-Citadel → Settings… (⌘,) has two tabs.
+Citadel → Settings… (⌘,) has three tabs.
 
 ![Settings, Memories tab](docs/images/settings-en.png)
 
@@ -154,6 +200,7 @@ Citadel → Settings… (⌘,) has two tabs.
 |---|---|
 | Memories | The memory folder (Choose…, or Default to go back to `~/Library/Application Support/Citadel/memories`), the list of memories with their index lines, Open folder, Show in Finder for each memory, and Delete, which asks first and removes the file and its index line. |
 | Rules | The rules sent at the start of every request, editable. Save (⌘S) writes them; Revert discards the changes; Restore defaults puts back the original rules. |
+| Ollama | Where Ollama runs: on this Mac, or on another computer through SSH (see [Ollama on another computer](#ollama-on-another-computer)). Apply and test connects at once and lists the models found. |
 
 Any folder can be the memory folder, including one that another tool also uses, as long as it keeps
 the same `_index.md` format.
@@ -181,9 +228,42 @@ cloud, which it cannot know.
 
 ### Language
 
-The interface is in English on the first start. The Language menu (Idioma, when the interface is in
-Spanish) switches it at once, and the choice is remembered. The language of the interface does not
-change the language of the answers: the model answers in the language you write in.
+The interface is in English on the first start. The globe button at the top right, next to the model
+menu, shows the current language and switches between English and Español; the Language menu in the
+menu bar (Idioma, in Spanish) does the same. The change applies at once and is remembered. The menus
+that macOS adds to every app (Edit, View, Window, Help) follow the same language from the next
+launch, because macOS reads it when the app starts. The language of the interface does not change
+the language of the answers: the model answers in the language you write in.
+
+### Ollama on another computer
+
+A model too big for this Mac can run on another computer of yours, and Citadel can use it through
+SSH. Citadel starts `/usr/bin/ssh` with a tunnel from a free local port to port 11434 of that
+computer, sends every request through it, and closes it on quit. Ollama's port is never opened to the
+network: the other computer only has to accept SSH. Conversations, rules and memories stay on this
+Mac; the other computer receives each request as it is sent, as Ollama always does.
+
+On the computer that runs the model:
+
+1. Install Ollama and the models, as in [Requirements](#requirements). Ollama only needs to listen on
+   `127.0.0.1`, its default.
+2. Turn on the SSH server: on a Mac, System Settings → General → Sharing → Remote Login; on Windows,
+   Settings → System → Optional features → OpenSSH Server, then start the `sshd` service.
+3. Authorize this Mac's public key (`~/.ssh/id_ed25519.pub`; create it with `ssh-keygen -t ed25519`
+   if it does not exist). In the user's `~/.ssh/authorized_keys`, a line like this lets that key
+   forward Ollama's port and nothing else (no shell, no commands, no other ports):
+
+   ```
+   restrict,port-forwarding,permitopen="127.0.0.1:11434",command="/usr/bin/false" ssh-ed25519 AAAA… name
+   ```
+
+On this Mac, open Settings → Ollama, choose "On another computer, through SSH", type the destination
+(`user@host`, or a `Host` name from `~/.ssh/config`) and click Apply and test. The result line lists
+the models found there, and the status line under the text box says "Ollama on <host> (SSH)".
+Citadel never asks for a password (it runs ssh in batch mode), so the key must work without one, or
+be loaded in the SSH agent. The first connection to a new host records its key in
+`~/.ssh/known_hosts`; a later change of that key makes the connection fail, as in any SSH client.
+If the connection drops, Citadel opens it again with the next request.
 
 ![About Citadel](docs/images/about-en.png)
 
@@ -206,7 +286,7 @@ change the language of the answers: the model answers in the language you write 
 | Conversations | `~/Library/Application Support/Citadel/conversations/`, one JSON file each |
 | Rules | `~/Library/Application Support/Citadel/rules.md` |
 | Memories (default folder) | `~/Library/Application Support/Citadel/memories/`, with `_index.md` |
-| Settings (language, model, Reason, memory folder, window size) | preferences domain `io.github.gabriel-castiglia.citadel` |
+| Settings (language, model, Reason, memory folder, SSH destination, window size) | preferences domain `io.github.gabriel-castiglia.citadel` |
 | Signing keychain | `~/Library/Keychains/citadel-signing.keychain-db` |
 
 Files are written in UTF-8 without a byte order mark. Conversations are plain JSON and can be read,
@@ -232,6 +312,7 @@ is not an Apple Developer ID, so Citadel is meant to be built where it runs.
 | `scripts/compilar.sh` | Compiles `Sources/*.swift` with `swiftc` into `build/Citadel.app`, makes the icon file from `icono/icono-1024.png` and writes `Info.plist`. The version is set here and only here; the About window reads it from `Info.plist`. |
 | `scripts/firma.sh` | Signs `build/Citadel.app` (see [Signing](#signing)). |
 | `scripts/instalar.sh` | Runs both, then installs to `/Applications`. |
+| `scripts/paquete.sh` | Runs both, then builds the installer package `build/Citadel-<version>.pkg` from `instalador/`. |
 | `scripts/manual.sh` | Builds the PDF manuals in `docs/` from `README.md` and `README.es.md`. |
 | `icono/render.sh` | Renders `icono/icono.svg` to `icono/icono-1024.png` with headless Chrome. |
 
@@ -250,7 +331,8 @@ The app has two modes for maintenance. Both take `--data-folder <folder>` to use
 | Folder | Contents |
 |---|---|
 | `Sources` | The app: SwiftUI views, the Ollama client, conversations, memories, settings, self-test. |
-| `scripts` | Build, signing, installation and manuals. |
+| `scripts` | Build, signing, installation, package and manuals. |
+| `instalador` | The package definition: `Distribution.xml`, the script that quits a running copy, and the welcome and conclusion pages in English and Spanish. |
 | `icono` | The icon, as SVG and as a 1024-pixel PNG. |
 | `docs` | PDF manuals, images and the manual stylesheet. |
 
@@ -272,6 +354,12 @@ The app has two modes for maintenance. Both take `--data-folder <folder>` to use
   then makes the file name kebab-case, rewrites the `_Updated` line with the real date and model, and
   replaces the old index line of the same file instead of adding a second one.
 - Conversation files tolerate missing fields, so files written by other versions still open.
+- Ollama answers a request with `"think": true` to a model without that capability with an error
+  ("does not support thinking"). Citadel reads the capabilities from `/api/show` and sends
+  `"think": false` to those models, whatever the state of the Reason button.
+- The SSH tunnel runs `ssh -N` with `BatchMode=yes`, `ExitOnForwardFailure=yes` and keepalives every
+  15 seconds; Citadel waits until the local end accepts connections before sending. If Citadel is
+  killed instead of quit, the next start ends the tunnel it left behind.
 
 ## Credits
 

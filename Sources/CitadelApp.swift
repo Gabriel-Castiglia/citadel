@@ -100,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.appearance = NSAppearance(named: .darkAqua)
+        Connection.cleanUp()
         let selfTest = CommandLine.arguments.contains("--self-test")
         let screenshot = argument(after: "--screenshot")
         MainActor.assumeIsolated {
@@ -119,12 +120,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if selfTest {
             Task { @MainActor in
                 let ok = await SelfTest.run()
-                exit(ok ? 0 : 1)
+                finish(ok ? 0 : 1)
             }
         }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    func applicationWillTerminate(_ notification: Notification) { Connection.cleanUp() }
 
     private var mainWindow: NSWindow? {
         NSApp.windows.first { $0.identifier?.rawValue.contains("main") == true }
@@ -168,7 +171,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             captureWindow = NSApp.windows.first { $0.isVisible && $0 !== main && $0.styleMask.contains(.titled) }
             guard captureWindow != nil else {
                 FileHandle.standardError.write(Data("the Settings window did not open\n".utf8))
-                exit(1)
+                finish(1)
             }
             mainWindow?.orderOut(nil)
             captureAfterFrames(90, to: path)
@@ -179,13 +182,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                   let draft = try? await MemoryStore.draft(from: ChatModel.transcript(of: c), model: model.selectedModel)
             else {
                 FileHandle.standardError.write(Data("could not draft a memory\n".utf8))
-                exit(1)
+                finish(1)
             }
             model.draftReplaces = MemoryStore.exists(draft.file)
             view = AnyView(MemoryPreviewSheet(model: model, editor: DraftEditor(draft)).frame(width: 680, height: 600))
         default:
             FileHandle.standardError.write(Data("unknown view: \(name)\n".utf8))
-            exit(1)
+            finish(1)
         }
         let host = NSHostingView(rootView: view.preferredColorScheme(.dark))
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: host.fittingSize),
@@ -210,7 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             timer.invalidate()
             let ok = self.saveWindowPicture(to: path)
             FileHandle.standardError.write(Data((ok ? "screenshot saved: \(path)\n" : "screenshot failed\n").utf8))
-            exit(ok ? 0 : 1)
+            finish(ok ? 0 : 1)
         }
     }
 
