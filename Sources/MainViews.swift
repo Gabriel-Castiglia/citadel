@@ -21,13 +21,14 @@ import SwiftUI
 struct RootView: View {
     @ObservedObject var model: ChatModel
     @ObservedObject var lang = L10n.shared
+    @ObservedObject var theme = ThemePrefs.shared
 
     var body: some View {
         HStack(spacing: 0) {
             SidebarView(model: model)
                 .frame(width: 264)
                 .background(SidebarBlur(material: .sidebar))
-            Rectangle().fill(Color.black.opacity(0.45)).frame(width: 1)
+            Rectangle().fill(Color.sunken(0.45)).frame(width: 1)
             ChatPane(model: model)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(nsColor: .windowBackgroundColor))
@@ -35,7 +36,8 @@ struct RootView: View {
         .ignoresSafeArea()
         .background(SettingsOpener())
         .frame(minWidth: 820, minHeight: 540)
-        .preferredColorScheme(.dark)
+        .tint(Color.theme)
+        .id(theme.accent)
         .sheet(isPresented: Binding(get: { model.memoryDraft != nil },
                                     set: { if !$0 { model.memoryDraft = nil } })) {
             if let draft = model.memoryDraft {
@@ -86,7 +88,7 @@ struct SidebarView: View {
             }
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.raised(0.07)))
             .padding(.horizontal, 12)
 
             ScrollView {
@@ -164,7 +166,7 @@ struct ConversationRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(selected ? Color.accentColor.opacity(0.28) : Color.clear)
+                .fill(selected ? Color.theme.opacity(0.28) : Color.clear)
         )
     }
 }
@@ -242,7 +244,7 @@ struct LanguagePicker: View {
         .fixedSize()
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Color.white.opacity(0.08)))
+        .background(Capsule().fill(Color.raised(0.08)))
         .help(tr("Idioma de la interfaz", "Interface language"))
     }
 }
@@ -281,7 +283,7 @@ struct ModelPicker: View {
         .fixedSize()
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Color.white.opacity(0.08)))
+        .background(Capsule().fill(Color.raised(0.08)))
         .help(tr("Modelo de Ollama", "Ollama model"))
     }
 }
@@ -312,7 +314,7 @@ struct EmptyChatView: View {
             }
             .padding(18)
             .frame(maxWidth: 520)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))
+            .background(RoundedRectangle(cornerRadius: 14).fill(Color.raised(0.04)))
             .padding(.top, 8)
             Spacer()
         }
@@ -322,7 +324,7 @@ struct EmptyChatView: View {
 
     private func hint(_ symbol: String, _ text: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Image(systemName: symbol).foregroundStyle(Color.accentColor).frame(width: 18)
+            Image(systemName: symbol).foregroundStyle(Color.theme).frame(width: 18)
             Text(text).font(.system(size: 12.5)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -386,7 +388,7 @@ struct MessageRow: View {
                             .padding(.horizontal, 14)
                             .padding(.vertical, 9)
                             .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.accentColor.opacity(0.32)))
+                                .fill(Color.theme.opacity(0.32)))
                     }
                 }
             }
@@ -411,13 +413,13 @@ struct Chip: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: symbol).foregroundStyle(Color.accentColor)
+            Image(systemName: symbol).foregroundStyle(Color.theme)
             Text(text)
         }
         .font(.system(size: 12, weight: .medium))
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Color.white.opacity(0.08)))
+        .background(Capsule().fill(Color.raised(0.08)))
     }
 }
 
@@ -570,10 +572,10 @@ struct ComposerView: View {
                     Button { model.reason.toggle() } label: {
                         Label(tr("Razonar", "Reason"), systemImage: reasonOn ? "brain.fill" : "brain")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(reasonOn ? Color.white : Color.secondary)
+                            .foregroundStyle(reasonOn ? Color.onTheme : Color.secondary)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(Capsule().fill(reasonOn ? Color.accentColor : Color.white.opacity(0.08)))
+                            .background(Capsule().fill(reasonOn ? Color.theme : Color.raised(0.08)))
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -600,8 +602,8 @@ struct ComposerView: View {
                             Image(systemName: "stop.fill")
                                 .font(.system(size: 11, weight: .bold))
                                 .frame(width: 28, height: 28)
-                                .background(Circle().fill(Color.white.opacity(0.9)))
-                                .foregroundStyle(.black)
+                                .background(Circle().fill(Color.primary.opacity(0.85)))
+                                .foregroundStyle(Color(nsColor: .windowBackgroundColor))
                         }
                         .buttonStyle(.plain)
                         .help(tr("Detener", "Stop"))
@@ -611,8 +613,8 @@ struct ComposerView: View {
                             Image(systemName: "arrow.up")
                                 .font(.system(size: 13, weight: .bold))
                                 .frame(width: 28, height: 28)
-                                .background(Circle().fill(model.canSend ? Color.accentColor : Color.white.opacity(0.12)))
-                                .foregroundStyle(model.canSend ? Color.white : Color.secondary)
+                                .background(Circle().fill(model.canSend ? Color.theme : Color.raised(0.12)))
+                                .foregroundStyle(model.canSend ? Color.onTheme : Color.secondary)
                         }
                         .buttonStyle(.plain)
                         .disabled(!model.canSend)
@@ -621,8 +623,8 @@ struct ComposerView: View {
                 }
             }
             .padding(12)
-            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white.opacity(0.06)))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.10)))
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.raised(0.06)))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.raised(0.10)))
 
             StatusLine(model: model)
         }
@@ -655,7 +657,7 @@ struct StatusLine: View {
 
     private var dotColor: Color {
         switch model.reachable {
-        case .some(true): return model.isGenerating ? .yellow : .accentColor
+        case .some(true): return model.isGenerating ? .yellow : Color.theme
         case .some(false): return .orange
         case .none: return .gray
         }
@@ -741,7 +743,7 @@ struct MemoryPreviewSheet: View {
                 .font(.system(size: 12.5, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .padding(8)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.3)))
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.sunken(0.3)))
 
             HStack {
                 Text("\(editor.content.components(separatedBy: "\n").count) " + tr("líneas", "lines"))
@@ -755,6 +757,5 @@ struct MemoryPreviewSheet: View {
         }
         .padding(20)
         .frame(minWidth: 620, idealWidth: 680, minHeight: 520, idealHeight: 600)
-        .preferredColorScheme(.dark)
     }
 }

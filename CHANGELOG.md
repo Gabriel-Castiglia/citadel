@@ -2,6 +2,14 @@
 
 All notable changes to Citadel. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.2.0 - 2026-11-10
+
+### Added
+
+- Theme and colour, as in Wyrmhold and Gryphmark: Settings → Appearance chooses as macOS, light or dark (the
+  default), and one of twelve colours for the buttons, the selection and the icon in the Dock (green is the
+  original). Every colour that was fixed for the dark window now follows the appearance.
+
 ## 1.1.0 - 2026-11-09
 
 ### Added

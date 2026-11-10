@@ -1,6 +1,6 @@
 # Citadel
 
-Gabriel Castiglia · November 9, 2026 · version 1.1.0 · GPL-2.0 license
+Gabriel Castiglia · November 10, 2026 · version 1.2.0 · GPL-2.0 license
 
 English · [Español](README.es.md)
 
@@ -63,7 +63,7 @@ package; the installed app opens normally. The `SHA256SUMS.txt` file of each rel
 the download first:
 
 ```
-shasum -a 256 Citadel-1.1.0.pkg
+shasum -a 256 Citadel-1.2.0.pkg
 ```
 
 ### From source
@@ -234,6 +234,14 @@ menu bar (Idioma, in Spanish) does the same. The change applies at once and is r
 that macOS adds to every app (Edit, View, Window, Help) follow the same language from the next
 launch, because macOS reads it when the app starts. The language of the interface does not change
 the language of the answers: the model answers in the language you write in.
+
+### Theme and colour
+
+Settings → Appearance chooses the look of the window: as macOS (light or dark, like your other apps),
+light or dark, which is the default. Below it, twelve colours change the buttons, the selection and
+the glow behind the citadel in the icon in the Dock; green is the original. The icon in the Finder and
+Launchpad stays green, because changing it would break the app's signature. The Windows version has the
+same choices.
 
 ### Ollama on another computer
 

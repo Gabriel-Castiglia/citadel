@@ -1,6 +1,6 @@
 # Citadel
 
-Gabriel Castiglia · 9 de noviembre de 2026 · versión 1.1.0 · licencia GPL-2.0
+Gabriel Castiglia · 10 de noviembre de 2026 · versión 1.2.0 · licencia GPL-2.0
 
 [English](README.md) · Español
 
@@ -65,7 +65,7 @@ cada paquete descargado; la app instalada abre sin avisos. El archivo `SHA256SUM
 permite comprobar antes la descarga:
 
 ```
-shasum -a 256 Citadel-1.1.0.pkg
+shasum -a 256 Citadel-1.2.0.pkg
 ```
 
 ### Desde el código
@@ -241,6 +241,14 @@ muestra el idioma actual y cambia entre English y Español; el menú Idioma de l
 macOS agrega a toda app (Edición, Visualización, Ventana, Ayuda) siguen el mismo idioma desde el
 próximo arranque, porque macOS lo lee cuando la app se abre. El idioma de la interfaz no cambia el de
 las respuestas: el modelo contesta en el idioma en que le escribes.
+
+### Tema y color
+
+Ajustes → Apariencia elige cómo se ve la ventana: como macOS (clara u oscura, como tus otras apps),
+clara u oscura, que es la de fábrica. Debajo, doce colores cambian los botones, la selección y el
+resplandor detrás de la ciudadela en el ícono del Dock; el verde es el original. El ícono del Finder y
+de Launchpad sigue verde, porque cambiarlo rompería la firma de la app. La versión para Windows tiene
+las mismas opciones.
 
 ### Ollama en otra computadora
 

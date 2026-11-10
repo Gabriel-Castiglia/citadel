@@ -119,7 +119,7 @@ enum MarkdownParser {
         guard var out = try? AttributedString(markdown: s, options: opts) else { return AttributedString(s) }
         // Give inline code a subtle box so it stands out from the text around it.
         for run in out.runs where run.inlinePresentationIntent?.contains(.code) == true {
-            out[run.range].backgroundColor = Color.white.opacity(0.10)
+            out[run.range].backgroundColor = Color.raised(0.10)
         }
         return out
     }
@@ -197,7 +197,7 @@ struct MarkdownView: View {
                 tableRow(row, header: i == 0)
             }
         }
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1)))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.raised(0.1)))
     }
 
     private func tableRow(_ row: [String], header: Bool) -> some View {
@@ -210,7 +210,7 @@ struct MarkdownView: View {
                     .padding(.horizontal, 8)
             }
         }
-        .background(header ? Color.white.opacity(0.06) : Color.clear)
+        .background(header ? Color.raised(0.06) : Color.clear)
     }
 }
 
@@ -239,7 +239,7 @@ struct CodeBlockView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Color.white.opacity(0.04))
+            .background(Color.raised(0.04))
             Divider().opacity(0.5)
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(code)
@@ -249,8 +249,8 @@ struct CodeBlockView: View {
                     .padding(12)
             }
         }
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.35)))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.08)))
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.sunken(0.35)))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.raised(0.08)))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

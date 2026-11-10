@@ -12,7 +12,7 @@
 set -euo pipefail
 
 # The version lives here and only here; the app reads it from Info.plist.
-version=1.1.0
+version=1.2.0
 
 root=${0:A:h:h}
 cd $root
@@ -40,6 +40,7 @@ for size in 16 32 128 256 512; do
 done
 iconutil -c icns -o $contents/Resources/Citadel.icns $iconset
 rm -rf $iconset
+cp -R icono/accents $contents/Resources/accents   # the icon in each theme colour (Theme.swift)
 
 cat > $contents/Info.plist <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

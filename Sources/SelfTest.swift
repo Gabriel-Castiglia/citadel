@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program; if not, see <https://www.gnu.org/licenses/>.
 
+import AppKit
 import Foundation
 
 /// End-to-end check of the running app, driven through the same ChatModel the window uses:
@@ -139,6 +140,21 @@ enum SelfTest {
         check(m.current?.messages.last?.role == .notice, "/mem with no match says so")
 
         m.reason = savedReason
+
+        // Theme: the twelve icons are in the app, and the appearance follows the choice.
+        let theme = ThemePrefs.shared
+        check(Accent.all.allSatisfy { $0.icon != nil } && Accent.all.count == 12, "twelve theme colours, each with its icon")
+        let (savedLook, savedAccent) = (theme.appearance, theme.accent)
+        theme.appearance = "light"
+        let light = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .aqua
+        theme.appearance = "dark"
+        let dark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        check(light && dark, "light and dark appearance applied")
+        theme.accent = "purple"
+        check(theme.dockIcon == "purple" && NSApp.applicationIconImage != nil,
+              "the Dock icon takes the chosen colour")
+        theme.appearance = savedLook; theme.accent = savedAccent
+
         say(failures == 0 ? "ALL PASSED" : "\(failures) FAILED")
         return failures == 0
     }

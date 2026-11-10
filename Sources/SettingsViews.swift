@@ -70,9 +70,11 @@ struct SettingsView: View {
                 .tabItem { Label(tr("Reglas", "Rules"), systemImage: "list.bullet.rectangle") }
             OllamaSettings()
                 .tabItem { Label("Ollama", systemImage: "network") }
+            ThemeSettings()
+                .tabItem { Label(tr("Apariencia", "Appearance"), systemImage: "paintpalette") }
         }
+        .tint(Color.theme)
         .frame(minWidth: 620, idealWidth: 680, minHeight: 460, idealHeight: 540)
-        .preferredColorScheme(.dark)
         .id(lang.language)
     }
 }
@@ -91,7 +93,7 @@ struct GeneralSettings: View {
                     .textSelection(.enabled)
                     .padding(.horizontal, 8).padding(.vertical, 5)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.06)))
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.raised(0.06)))
                 Button(tr("Elegir…", "Choose…")) { state.chooseFolder() }
                 Button(tr("Por defecto", "Default")) { state.resetFolder() }
                     .help(Paths.defaultMemoryFolder.path)
@@ -116,7 +118,7 @@ struct GeneralSettings: View {
             List {
                 ForEach(state.memories) { m in
                     HStack(spacing: 10) {
-                        Image(systemName: "doc.text").foregroundStyle(Color.accentColor)
+                        Image(systemName: "doc.text").foregroundStyle(Color.theme)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(m.file).font(.system(size: 12.5, weight: .medium, design: .monospaced))
                             Text(m.topic.isEmpty ? tr("(no figura en el índice)", "(not in the index)") : m.topic)
@@ -240,7 +242,7 @@ struct RulesSettings: View {
                 .font(.system(size: 12.5, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .padding(8)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.3)))
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.sunken(0.3)))
             HStack {
                 if let msg = state.message { Text(msg).font(.system(size: 11.5)).foregroundStyle(.secondary) }
                 Spacer()
@@ -295,7 +297,6 @@ struct AboutView: View {
         }
         .padding(28)
         .frame(width: 380)
-        .preferredColorScheme(.dark)
         .id(lang.language)
     }
 }

@@ -99,10 +99,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.appearance = NSAppearance(named: .darkAqua)
         Connection.cleanUp()
         let selfTest = CommandLine.arguments.contains("--self-test")
         let screenshot = argument(after: "--screenshot")
+        let theme = ThemePrefs.shared
+        theme.persist = !selfTest && screenshot == nil
+        if screenshot != nil {
+            if let a = argument(after: "--appearance") { theme.appearance = a }
+            if let c = argument(after: "--accent") { theme.accent = c }
+        }
+        theme.apply()
         MainActor.assumeIsolated {
             ChatModel.shared.persist = !selfTest
             ChatModel.shared.start(loadSaved: !selfTest)
@@ -190,7 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             FileHandle.standardError.write(Data("unknown view: \(name)\n".utf8))
             finish(1)
         }
-        let host = NSHostingView(rootView: view.preferredColorScheme(.dark))
+        let host = NSHostingView(rootView: view)
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: host.fittingSize),
                               styleMask: title.isEmpty ? [.borderless] : [.titled, .closable],
                               backing: .buffered, defer: false)
@@ -231,7 +237,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         else { return false }
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: out)
-        NSColor(calibratedWhite: 0.13, alpha: 1).setFill()
+        (window.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(calibratedWhite: 0.13, alpha: 1) : NSColor(calibratedWhite: 0.96, alpha: 1)).setFill()
         NSRect(origin: .zero, size: size).fill()
         rep.draw(in: NSRect(origin: .zero, size: size), from: .zero, operation: .sourceOver, fraction: 1,
                  respectFlipped: true, hints: nil)
