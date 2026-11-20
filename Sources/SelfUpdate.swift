@@ -3,7 +3,7 @@
 // Date: November 20, 2026
 // SPDX-License-Identifier: GPL-2.0-only
 //
-// The same file in Gryphmark, Wyrmhold, Haul and Citadel for macOS; each app sets the values at the top of
+// The same file in Vigía, Forja, Haul and Citadel for macOS; each app sets the values at the top of
 // SelfUpdate.shared when it starts. It follows the Windows versions of the same apps:
 //   Help → Check for updates, and once a day by itself, asks GitHub for the latest release. When it is newer, one
 //   question: Update now, What's new or Later. Then everything happens alone: <App>-<version>.pkg is downloaded and
@@ -23,8 +23,10 @@ final class SelfUpdate: NSObject, @unchecked Sendable {
     static let shared = SelfUpdate()
 
     // Set by the app when it starts.
-    var appName = ""                          // "Gryphmark": /Applications/Gryphmark.app, Gryphmark-<version>.pkg
-    var repo = ""                             // "Gabriel-Castiglia/gryphmark"
+    var appName = ""                          // "Vigia": /Applications/Vigia.app, Vigia-<version>.pkg
+    var displayName = ""                      // "Vigía": how the texts name the app (appName when empty)
+    private var shown: String { displayName.isEmpty ? appName : displayName }
+    var repo = ""                             // "Gabriel-Castiglia/vigia"
     var version = "0.0.0"
     var language: () -> String = { "en" }     // "en", "es" or "ja"
     var dailyCheckOn: () -> Bool = { true }
@@ -247,10 +249,10 @@ final class SelfUpdate: NSObject, @unchecked Sendable {
         var bare = rel.tag
         while bare.hasPrefix("v") || bare.hasPrefix("V") { bare.removeFirst() }
         guard SelfUpdate.isNewer(rel.tag, than: version) else {
-            if interactive { say(T("UpToDate", appName, version)) }
+            if interactive { say(T("UpToDate", shown, version)) }
             return
         }
-        let head = T("AskHead", appName, bare)
+        let head = T("AskHead", shown, bare)
         guard Bundle.main.bundleURL.standardizedFileURL.path == installedURL.path else {
             return offerPage(rel, head: head, text: T("NotInstalled", version, appName))
         }
@@ -259,7 +261,7 @@ final class SelfUpdate: NSObject, @unchecked Sendable {
         }
         let a = NSAlert()
         a.messageText = head
-        a.informativeText = T("Ask", version, appName)
+        a.informativeText = T("Ask", version, shown)
         a.addButton(withTitle: T("Now"))
         a.addButton(withTitle: T("Notes"))
         a.addButton(withTitle: T("Later"))
@@ -294,7 +296,7 @@ final class SelfUpdate: NSObject, @unchecked Sendable {
     @MainActor
     private func say(_ text: String, warning: Bool = false) {
         let a = NSAlert()
-        a.messageText = appName
+        a.messageText = shown
         a.informativeText = text
         a.alertStyle = warning ? .warning : .informational
         a.addButton(withTitle: T("OK"))
@@ -310,7 +312,7 @@ final class SelfUpdate: NSObject, @unchecked Sendable {
         let fm = FileManager.default
         try? fm.removeItem(at: workDir)
         try fm.createDirectory(at: workDir, withIntermediateDirectories: true)
-        showPanel(T("Downloading", appName, bare, "0 %"))
+        showPanel(T("Downloading", shown, bare, "0 %"))
 
         var req = URLRequest(url: sumsURL, timeoutInterval: 30)
         req.setValue("\(appName)/\(version)", forHTTPHeaderField: "User-Agent")
@@ -321,7 +323,7 @@ final class SelfUpdate: NSObject, @unchecked Sendable {
         let pkg = workDir.appendingPathComponent(pkgName)
         try await Downloader(url: pkgURL, agent: "\(appName)/\(version)") { [weak self] pct, done in
             guard let self else { return }
-            self.panelText?.stringValue = self.T("Downloading", self.appName, bare, pct >= 0 ? "\(pct) %" : "\(done >> 20) MB")
+            self.panelText?.stringValue = self.T("Downloading", self.shown, bare, pct >= 0 ? "\(pct) %" : "\(done >> 20) MB")
             if pct >= 0 { self.panelBar?.isIndeterminate = false; self.panelBar?.doubleValue = Double(pct) }
         }.run(to: pkg)
 
@@ -456,7 +458,7 @@ final class SelfUpdate: NSObject, @unchecked Sendable {
     @MainActor
     private func showPanel(_ text: String) {
         let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 92), styleMask: [.titled], backing: .buffered, defer: false)
-        p.title = appName
+        p.title = shown
         p.isReleasedWhenClosed = false
         let label = NSTextField(labelWithString: text)
         label.frame = NSRect(x: 20, y: 50, width: 340, height: 20)
