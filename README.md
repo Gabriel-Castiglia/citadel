@@ -1,6 +1,6 @@
 # Citadel
 
-Gabriel Castiglia · November 10, 2026 · version 1.2.0 · GPL-2.0 license
+Gabriel Castiglia · November 20, 2026 · version 1.3.0 · GPL-2.0 license
 
 English · [Español](README.es.md)
 
@@ -63,7 +63,7 @@ package; the installed app opens normally. The `SHA256SUMS.txt` file of each rel
 the download first:
 
 ```
-shasum -a 256 Citadel-1.2.0.pkg
+shasum -a 256 Citadel-1.3.0.pkg
 ```
 
 ### From source
@@ -112,8 +112,26 @@ button for the whole answer, the model, its speed in tokens per second and the s
 
 The sidebar lists the conversations, newest first. ⌘N or the pencil button starts a new one, and its
 title is the first line of the first message. Right-click a conversation to rename it or delete it;
-deleting asks first and removes its file from disk. The search field filters by title, ignoring case
-and accents.
+deleting asks first and removes its file from disk. The search field (⌘F) filters by title and also
+looks in the text of every saved conversation, ignoring case, accents and line breaks: under *In the
+messages* each match shows the conversation, the date and the words around it, highlighted, and a click
+opens the conversation at that message, which blinks once.
+
+The share button in the header, or the menu of a conversation in the sidebar, exports it to Markdown:
+title, date, model and each turn under its own heading, with code blocks intact, attachments and
+reasoning folded in `<details>`. With *Open after exporting* on, the file opens in the app macOS uses for
+`.md` files.
+
+### Updates
+
+Citadel → Check for Updates asks GitHub for the latest release, and so does a check once a day. When
+there is a newer one, one question: Update now, What's new or Later. Update now downloads the package,
+checks it against the release's `SHA256SUMS.txt` (a file that does not match is deleted and never
+opened), checks that the app inside has the same identifier, the announced version and the same
+signature, waits for or stops an answer in progress as you choose, and quits; the new app takes the place
+of the old one and opens with the text being typed and the open conversation. A copy that is not
+`/Applications/Citadel.app` is offered the download page; one installed by another user opens the checked
+package in Installer.
 
 ### Models
 
@@ -282,6 +300,7 @@ If the connection drops, Citadel opens it again with the next request.
 | Enter | Send |
 | Shift+Enter, Option+Enter | New line |
 | ⌘N | New conversation |
+| ⌘F | Search the conversations |
 | ⌘. | Stop the answer |
 | ⌘, | Settings |
 | ⌘S | Save the rules (Rules tab) |

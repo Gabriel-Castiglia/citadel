@@ -47,6 +47,13 @@ struct CitadelCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
             AboutMenuButton()
+            Button(tr("Buscar actualizaciones…", "Check for Updates…")) { SelfUpdate.shared.check(interactive: true) }
+        }
+        CommandGroup(after: .textEditing) {
+            Button(tr("Buscar en las conversaciones", "Search the Conversations")) {
+                NotificationCenter.default.post(name: .citadelFocusSearch, object: nil)
+            }
+            .keyboardShortcut("f", modifiers: .command)
         }
         CommandGroup(replacing: .newItem) {
             Button(tr("Conversación nueva", "New Conversation")) { model.newConversation() }
@@ -73,6 +80,8 @@ struct AboutMenuButton: View {
 extension Notification.Name {
     /// Asks the main window to open Settings (used by the screenshot mode).
     static let citadelOpenSettings = Notification.Name("CitadelOpenSettings")
+    /// ⌘F: the cursor goes to the search field of the sidebar.
+    static let citadelFocusSearch = Notification.Name("CitadelFocusSearch")
 }
 
 /// Opens the Settings window when asked through `citadelOpenSettings`.
@@ -123,6 +132,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 captureAfterFrames(120, to: path)
             }
         }
+        let up = SelfUpdate.shared
+        up.appName = "Citadel"
+        up.repo = "Gabriel-Castiglia/citadel"
+        up.version = AppInfo.version
+        up.language = { L10n.shared.isSpanish ? "es" : "en" }
+        up.readyToQuit = { await ChatModel.shared.readyToQuitForUpdate() }
+        up.beforeQuit = { MainActor.assumeIsolated { ChatModel.shared.keepDraftForUpdate() } }
+        if !selfTest && screenshot == nil {
+            up.cleanUpAtStart()
+            MainActor.assumeIsolated { ChatModel.shared.restoreDraftAfterUpdate() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8) { up.checkDaily() }
+        }
+
         if selfTest {
             Task { @MainActor in
                 let ok = await SelfTest.run()
@@ -133,7 +155,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
-    func applicationWillTerminate(_ notification: Notification) { Connection.cleanUp() }
+    func applicationWillTerminate(_ notification: Notification) {
+        Connection.cleanUp()
+        SelfUpdate.shared.finishIfStaged()
+    }
 
     private var mainWindow: NSWindow? {
         NSApp.windows.first { $0.identifier?.rawValue.contains("main") == true }

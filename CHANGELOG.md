@@ -2,6 +2,31 @@
 
 All notable changes to Citadel. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.3.0 - 2026-11-20
+
+What Citadel 1.3.0 for Windows brought, on the Mac.
+
+### Added
+
+- Updates that install themselves: once a day, and from Citadel → Check for Updates, Citadel looks for a newer
+  release on GitHub and asks once: Update now, What's new or Later. Update now downloads the package, checks it
+  against the release's `SHA256SUMS.txt` (a file that does not match is deleted and never opened) and the app
+  inside it for the same identifier, version and signature, waits for or stops an answer in progress as the user
+  chooses, quits, puts the new app in place of the old one and opens it with the text being typed and the open
+  conversation.
+- Search in the text of every saved conversation, ignoring case, accents and line breaks: the results show the
+  conversation, the date and the words around the match, highlighted, and a click opens the conversation at that
+  message. ⌘F goes to the search field.
+- Export a conversation to Markdown, from the header or from the sidebar menu: title, date, model and each turn
+  under its own heading, with code blocks intact; "Open after exporting" opens the file with the app macOS uses
+  for `.md` files.
+- `--self-test` checks the search, the export and the update checks first, without Ollama;
+  `--self-test --offline` runs only those.
+
+### Changed
+
+- The search field, which only looked at titles, also lists the matches in the messages.
+
 ## 1.2.0 - 2026-11-10
 
 ### Added

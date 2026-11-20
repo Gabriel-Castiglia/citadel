@@ -59,6 +59,7 @@ final class SidebarState: ObservableObject {
 struct SidebarView: View {
     @ObservedObject var model: ChatModel
     @StateObject private var state = SidebarState()
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -81,6 +82,8 @@ struct SidebarView: View {
                 TextField(tr("Buscar", "Search"), text: $model.search)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
+                    .focused($searchFocused)
+                    .onReceive(NotificationCenter.default.publisher(for: .citadelFocusSearch)) { _ in searchFocused = true }
                 if !model.search.isEmpty {
                     Button { model.search = "" } label: { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(.borderless).foregroundStyle(.secondary)
@@ -102,11 +105,23 @@ struct SidebarView: View {
                                     state.renameText = c.displayTitle
                                     state.renaming = c
                                 }
+                                ExportMenuItems(conversation: c)
                                 Divider()
                                 Button(tr("Eliminar…", "Delete…"), role: .destructive) { state.deleting = c }
                             }
                     }
-                    if model.filteredConversations.isEmpty, !model.search.isEmpty {
+                    if !model.messageHits.isEmpty {
+                        Text(tr("En los mensajes", "In the messages")
+                             + " (\(model.messageHits.count)\(model.messageHits.count >= ChatModel.maxHits ? "+" : ""))")
+                            .font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                            .padding(.horizontal, 10).padding(.top, 12).padding(.bottom, 2)
+                        ForEach(model.messageHits) { h in
+                            HitRow(hit: h)
+                                .contentShape(Rectangle())
+                                .onTapGesture { model.open(h) }
+                        }
+                    }
+                    if model.filteredConversations.isEmpty, model.messageHits.isEmpty, !model.search.isEmpty {
                         Text(tr("Sin resultados", "No results"))
                             .font(.system(size: 12)).foregroundStyle(.secondary)
                             .padding(12)
@@ -145,6 +160,36 @@ struct SidebarView: View {
             Text(tr("«\(state.deleting?.displayTitle ?? "")» se borrará del disco. No se puede deshacer.",
                     "“\(state.deleting?.displayTitle ?? "")” will be removed from disk. This cannot be undone."))
         }
+    }
+}
+
+/// A search result: the conversation, the date of the message and the text around the match, highlighted.
+struct HitRow: View {
+    let hit: SearchHit
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(hit.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                Spacer(minLength: 4)
+                Text(hit.date, format: .dateTime.day().month(.abbreviated)).font(.system(size: 10.5)).foregroundStyle(.secondary)
+            }
+            (Text(hit.before) + Text(hit.match).bold().foregroundColor(.accentColor) + Text(hit.after))
+                .font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(2)
+        }
+        .padding(.horizontal, 10).padding(.vertical, 6)
+    }
+}
+
+/// "Export to Markdown…" and the "Open after exporting" option, for a menu.
+struct ExportMenuItems: View {
+    let conversation: Conversation
+    @AppStorage(MarkdownExport.openAfterKey) private var openAfter = false
+
+    var body: some View {
+        Button(tr("Exportar a Markdown…", "Export to Markdown…")) { MarkdownExport.export(conversation) }
+            .disabled(conversation.messages.isEmpty)
+        Toggle(tr("Abrir después de exportar", "Open after exporting"), isOn: $openAfter)
     }
 }
 
@@ -211,6 +256,15 @@ struct ChatHeader: View {
                 .font(.system(size: 14, weight: .semibold))
                 .lineLimit(1)
             Spacer()
+            if let c = model.current, !c.messages.isEmpty {
+                Menu {
+                    ExportMenuItems(conversation: c)
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                .help(tr("Exportar a Markdown", "Export to Markdown"))
+            }
             LanguagePicker()
             ModelPicker(model: model)
         }
@@ -336,6 +390,21 @@ struct EmptyChatView: View {
 struct MessagesList: View {
     @ObservedObject var model: ChatModel
     let conversation: Conversation
+    @StateObject private var flash = BlinkState()
+    private var blink: UUID? { flash.id }
+
+    /// Scrolls to a message a search result asked for, after the scroll to the end the list makes, and blinks it.
+    private func reveal(_ id: UUID, _ proxy: ScrollViewProxy) {
+        guard conversation.messages.contains(where: { $0.id == id }) else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            proxy.scrollTo(id, anchor: .top)
+            withAnimation(.easeInOut(duration: 0.25)) { flash.id = id }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                withAnimation(.easeInOut(duration: 0.4)) { flash.id = nil }
+                model.scrollTarget = nil
+            }
+        }
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -344,6 +413,8 @@ struct MessagesList: View {
                     ForEach(conversation.messages) { m in
                         MessageRow(message: m, isStreaming: model.isGenerating && m.id == conversation.messages.last?.id,
                                    model: model)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.accentColor.opacity(blink == m.id ? 0.18 : 0))
+                                .padding(-8))
                             .id(m.id)
                     }
                     Color.clear.frame(height: 1).id("bottom")
@@ -353,7 +424,10 @@ struct MessagesList: View {
                 .frame(maxWidth: 860)
                 .frame(maxWidth: .infinity)
             }
-            .onAppear { proxy.scrollTo("bottom", anchor: .bottom) }
+            .onAppear {
+                if let t = model.scrollTarget { reveal(t, proxy) } else { proxy.scrollTo("bottom", anchor: .bottom) }
+            }
+            .onChange(of: model.scrollTarget) { _, t in if let t { reveal(t, proxy) } }
             .onChange(of: conversation.messages.last?.content.count ?? 0) { _, _ in
                 proxy.scrollTo("bottom", anchor: .bottom)
             }
@@ -365,6 +439,11 @@ struct MessagesList: View {
             }
         }
     }
+}
+
+/// Which message is blinking (@State does not build without Xcode).
+final class BlinkState: ObservableObject {
+    @Published var id: UUID?
 }
 
 struct MessageRow: View {

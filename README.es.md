@@ -1,6 +1,6 @@
 # Citadel
 
-Gabriel Castiglia · 10 de noviembre de 2026 · versión 1.2.0 · licencia GPL-2.0
+Gabriel Castiglia · 20 de noviembre de 2026 · versión 1.3.0 · licencia GPL-2.0
 
 [English](README.md) · Español
 
@@ -65,7 +65,7 @@ cada paquete descargado; la app instalada abre sin avisos. El archivo `SHA256SUM
 permite comprobar antes la descarga:
 
 ```
-shasum -a 256 Citadel-1.2.0.pkg
+shasum -a 256 Citadel-1.3.0.pkg
 ```
 
 ### Desde el código
@@ -117,7 +117,26 @@ velocidad en tokens por segundo y los segundos que tardó.
 La barra lateral lista las conversaciones, de la más nueva a la más vieja. ⌘N o el botón del lápiz
 empiezan una nueva, cuyo título es la primera línea del primer mensaje. Con clic derecho sobre una
 conversación se la renombra o se la elimina; eliminar pide confirmación y borra su archivo del disco. El
-campo de búsqueda filtra por título sin distinguir mayúsculas ni tildes.
+campo de búsqueda (⌘F) filtra por título y también busca en el texto de todas las conversaciones
+guardadas, sin distinguir mayúsculas, tildes ni saltos de línea: bajo *En los mensajes* cada coincidencia
+muestra la conversación, la fecha y las palabras de alrededor, resaltadas, y un clic abre la conversación
+en ese mensaje, que parpadea una vez.
+
+El botón de compartir del encabezado, o el menú de una conversación en la barra lateral, la exporta a
+Markdown: título, fecha, modelo y cada turno bajo su propio encabezado, con los bloques de código
+intactos y los adjuntos y el razonamiento plegados en `<details>`. Con *Abrir después de exportar*
+encendido, el archivo se abre en la app que macOS usa para los `.md`.
+
+### Actualizaciones
+
+Citadel → Buscar actualizaciones le pregunta a GitHub por la última versión, y lo mismo hace un chequeo
+diario. Si hay una más nueva, una sola pregunta: Actualizar ahora, Ver novedades o Más tarde. Actualizar
+ahora descarga el paquete, lo compara con el `SHA256SUMS.txt` de la versión (si no coincide se borra sin
+abrirlo), comprueba que la app que trae tenga el mismo identificador, la versión anunciada y la misma
+firma, espera o detiene la respuesta en curso según elijas, y se cierra; la app nueva ocupa el lugar de
+la vieja y se abre con el texto que estabas escribiendo y la conversación abierta. Una copia que no es
+`/Applications/Citadel.app` recibe la página de descarga; una instalada por otro usuario abre el paquete
+ya comprobado en el Instalador.
 
 ### Modelos
 
@@ -291,6 +310,7 @@ cliente SSH. Si la conexión se corta, Citadel la vuelve a abrir con el pedido s
 | Enter | Enviar |
 | Shift+Enter, Option+Enter | Línea nueva |
 | ⌘N | Conversación nueva |
+| ⌘F | Buscar en las conversaciones |
 | ⌘. | Detener la respuesta |
 | ⌘, | Ajustes |
 | ⌘S | Guardar las reglas (pestaña Reglas) |

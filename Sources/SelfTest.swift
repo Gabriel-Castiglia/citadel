@@ -34,6 +34,38 @@ enum SelfTest {
         return true
     }
 
+    /// The search in the messages, the export to Markdown and the update checks (no network, no Ollama).
+    static func offlineChecks(_ check: (Bool, String) -> Void) {
+        var c = Conversation()
+        c.title = "Viaje en camión: notas/ideas"
+        var u = ChatMessage(role: .user, content: "¿Cuánto tarda el Camión\nde la mañana?")
+        u.attachments = [Attachment(name: "a.txt", text: "x ```` y")]
+        var a = ChatMessage(role: .assistant, content: "Tarda dos  horas.\n```swift\nlet x = 1")
+        a.thinking = "pensando"
+        a.stats = AnswerStats(model: "qwen3:8b", tokens: 10, tokensPerSecond: 12.34, seconds: 2.5)
+        c.messages = [u, a, ChatMessage(role: .notice, content: "camion en un aviso")]
+        let hits = ConversationSearch.find([c], "camion de la")
+        check(hits.count == 1 && hits.first?.match == "Camión de la", "search: case, accents and line breaks do not matter (\(hits.first?.match ?? "-"))")
+        check(ConversationSearch.find([c], "dos horas").first?.match == "dos horas", "search: runs of spaces are one space")
+        check(ConversationSearch.find([c], "aviso").isEmpty, "search: notes of the app are not searched")
+        check(ConversationSearch.find([c], "c").isEmpty, "search: one letter is too short")
+        let long = ChatMessage(role: .user, content: String(repeating: "palabra ", count: 40) + "AGUJA " + String(repeating: "otra ", count: 40))
+        var c2 = Conversation(); c2.messages = [long]
+        if let h = ConversationSearch.find([c2], "aguja").first {
+            check(h.before.hasPrefix("…") && h.after.hasSuffix("…") && h.before.hasSuffix(" ") && h.after.hasPrefix(" "),
+                  "search: the fragment is cut at spaces, with … on both sides")
+        } else { check(false, "search: a match inside a long message") }
+        let md = MarkdownExport.render(c, spanish: false, zone: TimeZone(identifier: "UTC")!, version: "9.9.9")
+        check(md.hasPrefix("# Viaje en camión: notas/ideas\n"), "export: the title is the heading")
+        check(md.contains("## User\n") && md.contains("## Assistant\n") && !md.contains("camion en un aviso"), "export: one heading per turn, no app notes")
+        check(md.contains("`````text\nx ```` y\n`````"), "export: an attachment in a fence longer than any inside it")
+        check(md.contains("let x = 1\n```\n"), "export: a code block left open is closed")
+        check(md.contains("_qwen3:8b · 12.3 tok/s · 2.5 s_") && md.contains("- Model: qwen3:8b"), "export: model and speed")
+        check(md.contains("<summary>Reasoning</summary>") && md.hasSuffix("\n"), "export: reasoning folded, final line break")
+        check(MarkdownExport.fileName(c) == "Viaje en camión- notas-ideas.md", "export: file name without / or : (\(MarkdownExport.fileName(c)))")
+        for (what, ok) in SelfUpdate.selfTest() { check(ok, what) }
+    }
+
     static func run() async -> Bool {
         let m = ChatModel.shared
         var failures = 0
@@ -43,6 +75,11 @@ enum SelfTest {
         }
 
         let args = CommandLine.arguments
+
+        // First the parts that need no Ollama: the search, the export and the update's pure functions.
+        offlineChecks(check)
+        if args.contains("--offline") { return failures == 0 }
+
         guard args.contains("--memory-folder") else {
             say("FAIL  --self-test needs --memory-folder <temporary folder>")
             return false

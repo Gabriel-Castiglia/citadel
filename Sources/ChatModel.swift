@@ -14,6 +14,7 @@
 // this program; if not, see <https://www.gnu.org/licenses/>.
 
 import Foundation
+import AppKit
 import SwiftUI
 
 /// The state of the main window: conversations, composer, model and Ollama status.
@@ -24,7 +25,32 @@ final class ChatModel: ObservableObject {
     // Conversations
     @Published var conversations: [Conversation] = []
     @Published var selectedID: UUID?
-    @Published var search = ""
+    @Published var search = "" { didSet { if search != oldValue { scheduleSearch() } } }
+    /// The matches of the search in the text of the conversations (searched once typing pauses).
+    @Published private(set) var messageHits: [SearchHit] = []
+    /// A message a search result asked to see: the list scrolls to it and it blinks once.
+    @Published var scrollTarget: UUID?
+    private var searchTask: Task<Void, Never>?
+    nonisolated static let maxHits = 200
+
+    private func scheduleSearch() {
+        searchTask?.cancel()
+        let q = search
+        guard ConversationSearch.foldQuery(q).count >= ConversationSearch.minLength else { messageHits = []; return }
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 220_000_000)
+            guard !Task.isCancelled, let self else { return }
+            let list = self.conversations.filter { !$0.messages.isEmpty }
+            let found = await Task.detached { ConversationSearch.find(list, q, perConversation: 5, max: ChatModel.maxHits) }.value
+            if !Task.isCancelled, self.search == q { self.messageHits = found }
+        }
+    }
+
+    /// Opens a conversation at one of its messages (a search result).
+    func open(_ hit: SearchHit) {
+        select(hit.conversation)
+        scrollTarget = hit.message
+    }
 
     // Composer
     @Published var composer = ""
@@ -383,6 +409,61 @@ final class ChatModel: ObservableObject {
     func stop() {
         streamTask?.cancel()
         draftTask?.cancel()
+    }
+
+    // MARK: Updates
+
+    /// Nothing is lost by quitting for an update: with an answer (or a memory draft) in progress the user chooses
+    /// to wait for it or to stop it, and an open memory preview is finished first. False when the user cancels.
+    func readyToQuitForUpdate() async -> Bool {
+        if isGenerating || isDraftingMemory {
+            let a = NSAlert()
+            a.messageText = tr("Hay una respuesta en curso", "An answer is being written")
+            a.informativeText = tr("Citadel se cerrará para instalar la versión nueva. La respuesta se guarda en la conversación tanto si esperas a que termine como si la detienes.",
+                                   "Citadel will close to install the new version. The answer is saved in the conversation whether you wait for it to finish or stop it.")
+            a.addButton(withTitle: tr("Esperar a que termine", "Wait for it to finish"))
+            a.addButton(withTitle: tr("Detenerla y actualizar", "Stop it and update"))
+            a.addButton(withTitle: tr("Cancelar", "Cancel"))
+            switch a.runModal() {
+            case .alertFirstButtonReturn: toast = tr("La actualización espera a que termine la respuesta…", "The update waits for the answer to finish…")
+            case .alertSecondButtonReturn: stop()
+            default: return false
+            }
+        }
+        // The answer is saved when its stream ends; a memory draft opens its preview, which is finished first.
+        while isGenerating || isDraftingMemory || memoryDraft != nil {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+        return true
+    }
+
+    private struct UpdateDraft: Codable {
+        var conversation: UUID?
+        var composer: String
+        var attachments: [Attachment]
+        var date = Date()
+    }
+    private static let draftKey = "updateDraft"
+
+    /// Right before quitting for an update: the text being typed and the open conversation, for the next start.
+    func keepDraftForUpdate() {
+        guard persist else { return }
+        let d = UpdateDraft(conversation: current?.messages.isEmpty == false ? selectedID : nil, composer: composer, attachments: attachments)
+        if let data = try? JSONEncoder().encode(d) { UserDefaults.standard.set(data, forKey: ChatModel.draftKey) }
+    }
+
+    /// After an update (within six hours): the text being typed and the open conversation come back.
+    func restoreDraftAfterUpdate() {
+        let ud = UserDefaults.standard
+        guard let data = ud.data(forKey: ChatModel.draftKey) else { return }
+        ud.removeObject(forKey: ChatModel.draftKey)
+        guard let d = try? JSONDecoder().decode(UpdateDraft.self, from: data), Date().timeIntervalSince(d.date) < 6 * 3600 else { return }
+        if let id = d.conversation, conversations.contains(where: { $0.id == id }) {
+            selectedID = id
+            conversations.removeAll { $0.messages.isEmpty && $0.id != id }
+        }
+        if composer.isEmpty { composer = d.composer }
+        attachments.append(contentsOf: d.attachments)
     }
 
     // MARK: Memories
