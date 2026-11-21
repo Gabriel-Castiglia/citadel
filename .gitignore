@@ -1,5 +1,7 @@
 # Build output (scripts/compilar.sh writes build/)
 build/
+/build
+/build.noindex/
 
 # Operating system files
 .DS_Store

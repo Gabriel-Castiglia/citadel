@@ -17,6 +17,14 @@ version=1.3.0
 root=${0:A:h:h}
 cd $root
 
+# Spotlight must not list the copies built here (21-nov-2026: Citadel and Vigía showed twice, and old Gryphmark
+# copies from expanded packages): build is a link to build.noindex, a folder Spotlight leaves out.
+if [[ ! -L build ]]; then
+    mkdir -p build.noindex
+    if [[ -d build ]]; then rsync -a build/ build.noindex/ && rm -rf build; fi
+    ln -s build.noindex build
+fi
+
 app=build/Citadel.app
 contents=$app/Contents
 rm -rf $app build/Citadel.iconset
