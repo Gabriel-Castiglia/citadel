@@ -1,6 +1,6 @@
 # Citadel
 
-Gabriel Castiglia · 20 de noviembre de 2026 · versión 1.3.0 · licencia GPL-2.0
+Gabriel Castiglia · 27 de noviembre de 2026 · versión 1.3.2 · licencia GPL-2.0
 
 [English](README.md) · Español
 
@@ -65,7 +65,7 @@ cada paquete descargado; la app instalada abre sin avisos. El archivo `SHA256SUM
 permite comprobar antes la descarga:
 
 ```
-shasum -a 256 Citadel-1.3.0.pkg
+shasum -a 256 Citadel-1.3.2.pkg
 ```
 
 ### Desde el código

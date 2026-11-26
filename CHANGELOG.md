@@ -2,6 +2,18 @@
 
 All notable changes to Citadel. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.3.2 - 2026-11-27
+
+The same number as Citadel 1.3.2 for Windows.
+
+### Changed
+
+- **A new icon**: a castle with its keep and two towers, and a speech bubble for a pennant, drawn as a flat picture,
+  cream with a black outline on the chosen colour; it still follows the colour chosen in the settings, in all twelve
+  colours. The drawing is `icono/icono.svg`, which `icono/render.sh` and `icono/render-accents.sh` turn into the icons.
+- The release carries `release.sig`, the author's signature of its `SHA256SUMS.txt`, like the Windows apps. Citadel
+  for Mac already accepts an update only when the downloaded app is signed as the installed one.
+
 ## 1.3.0 - 2026-11-20
 
 What Citadel 1.3.0 for Windows brought, on the Mac.

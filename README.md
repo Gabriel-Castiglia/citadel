@@ -1,6 +1,6 @@
 # Citadel
 
-Gabriel Castiglia · November 20, 2026 · version 1.3.0 · GPL-2.0 license
+Gabriel Castiglia · November 27, 2026 · version 1.3.2 · GPL-2.0 license
 
 English · [Español](README.es.md)
 
@@ -63,7 +63,7 @@ package; the installed app opens normally. The `SHA256SUMS.txt` file of each rel
 the download first:
 
 ```
-shasum -a 256 Citadel-1.3.0.pkg
+shasum -a 256 Citadel-1.3.2.pkg
 ```
 
 ### From source
