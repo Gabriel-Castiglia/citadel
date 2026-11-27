@@ -11,7 +11,7 @@
 # Public License for more details.
 #
 # The package installs /Applications/Citadel.app. Its welcome, license and conclusion pages are
-# in English and Spanish (instalador/resources/*.lproj); macOS Installer shows the language of
+# in English, Spanish and Japanese (instalador/resources/*.lproj); macOS Installer shows the language of
 # the Mac. The package itself is not signed: that needs an Apple Developer ID.
 set -euo pipefail
 root=${0:A:h:h}
@@ -37,7 +37,7 @@ pkgbuild --root $work/root --component-plist $work/component.plist \
   --install-location / --scripts instalador/scripts \
   $work/Citadel-component.pkg >/dev/null
 
-for lang in en es; do
+for lang in en es ja; do
   mkdir -p $work/resources/$lang.lproj
   for f in instalador/resources/$lang.lproj/*; do
     fill $f $work/resources/$lang.lproj/${f:t}

@@ -66,7 +66,7 @@ actor Connection {
         p.standardOutput = FileHandle.nullDevice
         p.standardInput = FileHandle.nullDevice
         do { try p.run() } catch {
-            lastError = tr("No se pudo ejecutar ssh: ", "Could not run ssh: ") + error.localizedDescription
+            lastError = tr("No se pudo ejecutar ssh: ", "Could not run ssh: ", "ssh を実行できませんでした: ") + error.localizedDescription
             throw OllamaError.remote(lastError!)
         }
 
@@ -76,8 +76,8 @@ actor Connection {
             if !p.isRunning {
                 let text = String(data: errors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
                 let last = text.split(separator: "\n").last.map(String.init)?.trimmingCharacters(in: .whitespaces)
-                lastError = tr("SSH a \(destination) falló: ", "SSH to \(destination) failed: ")
-                    + (last ?? tr("código \(p.terminationStatus)", "exit code \(p.terminationStatus)"))
+                lastError = tr("SSH a \(destination) falló: ", "SSH to \(destination) failed: ", "\(destination) への SSH 接続に失敗しました: ")
+                    + (last ?? tr("código \(p.terminationStatus)", "exit code \(p.terminationStatus)", "終了コード \(p.terminationStatus)"))
                 throw OllamaError.remote(lastError!)
             }
             if await Self.accepts(local) {
@@ -89,7 +89,7 @@ actor Connection {
             try? await Task.sleep(nanoseconds: 250_000_000)
         }
         p.terminate()
-        lastError = tr("SSH a \(destination) no respondió en 20 s.", "SSH to \(destination) did not answer within 20 s.")
+        lastError = tr("SSH a \(destination) no respondió en 20 s.", "SSH to \(destination) did not answer within 20 s.", "\(destination) への SSH 接続が 20 秒以内に応答しませんでした。")
         throw OllamaError.remote(lastError!)
     }
 

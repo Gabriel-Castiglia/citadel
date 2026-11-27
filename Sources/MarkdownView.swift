@@ -231,7 +231,7 @@ struct CodeBlockView: View {
                     copied.on = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied.on = false }
                 } label: {
-                    Label(copied.on ? tr("Copiado", "Copied") : tr("Copiar", "Copy"),
+                    Label(copied.on ? tr("Copiado", "Copied", "コピーしました") : tr("Copiar", "Copy", "コピー"),
                           systemImage: copied.on ? "checkmark" : "doc.on.doc")
                         .font(.system(size: 11))
                 }

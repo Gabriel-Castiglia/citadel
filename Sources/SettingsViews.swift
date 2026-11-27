@@ -20,13 +20,13 @@ import SwiftUI
 final class SettingsState: ObservableObject {
     @Published var rulesText = Rules.load()
     @Published var rulesSaved = true
-    @Published var folderPath = MemoryStore.folder.path.tildePath
+    @Published var folderPath = Paths.shown(MemoryStore.folder.path)
     @Published var memories: [MemoryEntry] = MemoryStore.allMemories()
     @Published var deleting: MemoryEntry?
     @Published var message: String?
 
     func reloadMemories() {
-        folderPath = MemoryStore.folder.path.tildePath
+        folderPath = Paths.shown(MemoryStore.folder.path)
         memories = MemoryStore.allMemories()
     }
 
@@ -36,7 +36,7 @@ final class SettingsState: ObservableObject {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.directoryURL = MemoryStore.folder
-        panel.prompt = tr("Elegir", "Choose")
+        panel.prompt = tr("Elegir", "Choose", "選択")
         if panel.runModal() == .OK, let url = panel.url {
             UserDefaults.standard.set(url.path, forKey: "memoryFolder")
             reloadMemories()
@@ -52,7 +52,7 @@ final class SettingsState: ObservableObject {
         do {
             try Rules.save(rulesText)
             rulesSaved = true
-            message = tr("Reglas guardadas.", "Rules saved.")
+            message = tr("Reglas guardadas.", "Rules saved.", "ルールを保存しました。")
         } catch {
             message = error.localizedDescription
         }
@@ -64,27 +64,30 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
-            GeneralSettings()
-                .tabItem { Label(tr("Memorias", "Memories"), systemImage: "bookmark") }
-            RulesSettings()
-                .tabItem { Label(tr("Reglas", "Rules"), systemImage: "list.bullet.rectangle") }
-            OllamaSettings()
+            GeneralSettings(language: lang.language)
+                .tabItem { Label(tr("Memorias", "Memories", "メモリ"), systemImage: "bookmark") }
+            RulesSettings(language: lang.language)
+                .tabItem { Label(tr("Reglas", "Rules", "ルール"), systemImage: "list.bullet.rectangle") }
+            OllamaSettings(language: lang.language)
                 .tabItem { Label("Ollama", systemImage: "network") }
-            ThemeSettings()
-                .tabItem { Label(tr("Apariencia", "Appearance"), systemImage: "paintpalette") }
+            ThemeSettings(language: lang.language)
+                .tabItem { Label(tr("Apariencia", "Appearance", "外観"), systemImage: "paintpalette") }
         }
         .tint(Color.theme)
         .frame(minWidth: 620, idealWidth: 680, minHeight: 460, idealHeight: 540)
-        .id(lang.language)
+        // No .id(language) here: it rebuilt the tabs, and rules being edited and not yet saved were lost.
+        // Each tab takes the language as an input instead, so it draws its texts again and keeps its state.
     }
 }
 
 struct GeneralSettings: View {
+    /// The interface language: a change redraws the texts, and the tab keeps what is being edited.
+    let language: String
     @StateObject private var state = SettingsState()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(tr("Carpeta de memorias", "Memory folder"))
+            Text(tr("Carpeta de memorias", "Memory folder", "メモリ フォルダー"))
                 .font(.system(size: 13, weight: .semibold))
             HStack(spacing: 8) {
                 Text(state.folderPath)
@@ -94,24 +97,24 @@ struct GeneralSettings: View {
                     .padding(.horizontal, 8).padding(.vertical, 5)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(RoundedRectangle(cornerRadius: 6).fill(Color.raised(0.06)))
-                Button(tr("Elegir…", "Choose…")) { state.chooseFolder() }
-                Button(tr("Por defecto", "Default")) { state.resetFolder() }
-                    .help(Paths.defaultMemoryFolder.path)
+                Button(tr("Elegir…", "Choose…", "選択…")) { state.chooseFolder() }
+                Button(tr("Por defecto", "Default", "既定")) { state.resetFolder() }
+                    .help(Paths.shown(Paths.defaultMemoryFolder.path))
             }
             Text(tr("El índice _index.md de esta carpeta se agrega a cada conversación. La app escribe las memorias (con /save), nunca el modelo.",
-                    "The _index.md of this folder is added to every conversation. The app writes memories (with /save), never the model."))
+                    "The _index.md of this folder is added to every conversation. The app writes memories (with /save), never the model.", "このフォルダーの _index.md はすべての会話に追加されます。メモリを書くのはアプリ (/save) で、モデルではありません。"))
                 .font(.system(size: 11.5)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack {
-                Text(tr("Memorias (\(state.memories.count))", "Memories (\(state.memories.count))"))
+                Text(tr("Memorias (\(state.memories.count))", "Memories (\(state.memories.count))", "メモリ (\(state.memories.count))"))
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
                 Button {
                     NSWorkspace.shared.open(MemoryStore.folder)
-                } label: { Label(tr("Abrir carpeta", "Open folder"), systemImage: "folder") }
+                } label: { Label(tr("Abrir carpeta", "Open folder", "フォルダーを開く"), systemImage: "folder") }
                 Button { state.reloadMemories() } label: { Image(systemName: "arrow.clockwise") }
-                    .help(tr("Actualizar", "Refresh"))
+                    .helpAndLabel(tr("Actualizar", "Refresh", "最新の情報に更新"))
             }
             .padding(.top, 6)
 
@@ -121,7 +124,7 @@ struct GeneralSettings: View {
                         Image(systemName: "doc.text").foregroundStyle(Color.theme)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(m.file).font(.system(size: 12.5, weight: .medium, design: .monospaced))
-                            Text(m.topic.isEmpty ? tr("(no figura en el índice)", "(not in the index)") : m.topic)
+                            Text(m.topic.isEmpty ? tr("(no figura en el índice)", "(not in the index)", "(インデックスにありません)") : m.topic)
                                 .font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(2)
                         }
                         Spacer()
@@ -130,10 +133,10 @@ struct GeneralSettings: View {
                             NSWorkspace.shared.activateFileViewerSelecting([url])
                         } label: { Image(systemName: "magnifyingglass") }
                             .buttonStyle(.borderless)
-                            .help(tr("Mostrar en Finder", "Show in Finder"))
+                            .helpAndLabel(tr("Mostrar en Finder", "Show in Finder", "Finder で表示"))
                         Button { state.deleting = m } label: { Image(systemName: "trash") }
                             .buttonStyle(.borderless)
-                            .help(tr("Eliminar", "Delete"))
+                            .helpAndLabel(tr("Eliminar", "Delete", "削除"))
                     }
                     .padding(.vertical, 3)
                 }
@@ -144,14 +147,14 @@ struct GeneralSettings: View {
             }
         }
         .padding(20)
-        .alert(tr("¿Eliminar esta memoria?", "Delete this memory?"),
+        .alert(tr("¿Eliminar esta memoria?", "Delete this memory?", "このメモリを削除しますか?"),
                isPresented: Binding(get: { state.deleting != nil }, set: { if !$0 { state.deleting = nil } })) {
-            Button(tr("Cancelar", "Cancel"), role: .cancel) { state.deleting = nil }
-            Button(tr("Eliminar", "Delete"), role: .destructive) {
+            Button(tr("Cancelar", "Cancel", "キャンセル"), role: .cancel) { state.deleting = nil }
+            Button(tr("Eliminar", "Delete", "削除"), role: .destructive) {
                 if let m = state.deleting {
                     do {
                         try MemoryStore.delete(m.file)
-                        state.message = tr("Eliminada: \(m.file)", "Deleted: \(m.file)")
+                        state.message = tr("Eliminada: \(m.file)", "Deleted: \(m.file)", "削除しました: \(m.file)")
                     } catch { state.message = error.localizedDescription }
                 }
                 state.deleting = nil
@@ -159,7 +162,7 @@ struct GeneralSettings: View {
             }
         } message: {
             Text(tr("Se borra el archivo \(state.deleting?.file ?? "") y su línea del índice.",
-                    "The file \(state.deleting?.file ?? "") and its index line will be removed."))
+                    "The file \(state.deleting?.file ?? "") and its index line will be removed.", "ファイル \(state.deleting?.file ?? "") と、インデックスのその行を削除します。"))
         }
     }
 }
@@ -177,11 +180,11 @@ final class OllamaSettingsState: ObservableObject {
         UserDefaults.standard.set(trimmed, forKey: "sshHost")
         UserDefaults.standard.set(remote && !trimmed.isEmpty, forKey: "useSSH")
         busy = true
-        result = tr("Conectando…", "Connecting…")
+        result = tr("Conectando…", "Connecting…", "接続しています…")
         await Connection.shared.stop()
         do {
             let models = try await OllamaClient().listModels()
-            result = tr("Conectado: \(models.count) modelo(s). ", "Connected: \(models.count) model(s). ") + models.joined(separator: ", ")
+            result = tr("Conectado: \(models.count) modelo(s). ", "Connected: \(models.count) model(s). ", "接続しました: モデル \(models.count) 個。 ") + models.joined(separator: ", ")
         } catch {
             result = error.localizedDescription
         }
@@ -191,30 +194,32 @@ final class OllamaSettingsState: ObservableObject {
 }
 
 struct OllamaSettings: View {
+    /// The interface language: a change redraws the texts, and the tab keeps what is being edited.
+    let language: String
     @StateObject private var state = OllamaSettingsState()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(tr("Dónde corre Ollama", "Where Ollama runs"))
+            Text(tr("Dónde corre Ollama", "Where Ollama runs", "Ollama の実行場所"))
                 .font(.system(size: 13, weight: .semibold))
             Picker("", selection: $state.remote) {
-                Text(tr("En esta Mac (127.0.0.1:11434)", "On this Mac (127.0.0.1:11434)")).tag(false)
-                Text(tr("En otra computadora, por SSH", "On another computer, through SSH")).tag(true)
+                Text(tr("En esta Mac (127.0.0.1:11434)", "On this Mac (127.0.0.1:11434)", "この Mac (127.0.0.1:11434)")).tag(false)
+                Text(tr("En otra computadora, por SSH", "On another computer, through SSH", "別のコンピューター (SSH 経由)")).tag(true)
             }
             .pickerStyle(.radioGroup)
             .labelsHidden()
-            TextField(tr("usuario@equipo, o un Host de ~/.ssh/config", "user@host, or a Host from ~/.ssh/config"), text: $state.host)
+            TextField(tr("usuario@equipo, o un Host de ~/.ssh/config", "user@host, or a Host from ~/.ssh/config", "user@host、または ~/.ssh/config の Host 名"), text: $state.host)
                 .font(.system(size: 12, design: .monospaced))
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 360)
                 .padding(.leading, 20)
                 .disabled(!state.remote)
             Text(tr("Citadel abre un túnel con el ssh de macOS hasta el puerto 11434 de esa computadora y lo cierra al salir. Usa tu llave SSH: nunca pide contraseña. El manual explica cómo preparar las dos computadoras.",
-                    "Citadel opens a tunnel with the macOS ssh command to port 11434 of that computer and closes it on quit. It uses your SSH key and never asks for a password. The manual explains how to prepare both computers."))
+                    "Citadel opens a tunnel with the macOS ssh command to port 11434 of that computer and closes it on quit. It uses your SSH key and never asks for a password. The manual explains how to prepare both computers.", "Citadel は macOS の ssh コマンドでそのコンピューターのポート 11434 へのトンネルを開き、終了時に閉じます。SSH 鍵を使い、パスワードを尋ねることはありません。両方のコンピューターの準備方法はマニュアルにあります。"))
                 .font(.system(size: 11.5)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 12) {
-                Button(tr("Aplicar y probar", "Apply and test")) { Task { await state.apply() } }
+                Button(tr("Aplicar y probar", "Apply and test", "適用してテスト")) { Task { await state.apply() } }
                     .disabled(state.busy)
                 Text(state.result)
                     .font(.system(size: 11.5)).foregroundStyle(.secondary)
@@ -228,14 +233,16 @@ struct OllamaSettings: View {
 }
 
 struct RulesSettings: View {
+    /// The interface language: a change redraws the texts, and the tab keeps what is being edited.
+    let language: String
     @StateObject private var state = SettingsState()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(tr("Estas reglas van como mensaje de sistema en cada consulta, junto con el índice de memorias.",
-                    "These rules go as the system message of every request, together with the memory index."))
+                    "These rules go as the system message of every request, together with the memory index.", "これらのルールは、メモリのインデックスと一緒に、毎回のリクエストのシステム メッセージとして送られます。"))
                 .font(.system(size: 11.5)).foregroundStyle(.secondary)
-            Text(Paths.rules.path.tildePath)
+            Text(Paths.shown(Paths.rules.path))
                 .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                 .textSelection(.enabled)
             TextEditor(text: Binding(get: { state.rulesText }, set: { state.rulesText = $0; state.rulesSaved = false }))
@@ -246,16 +253,16 @@ struct RulesSettings: View {
             HStack {
                 if let msg = state.message { Text(msg).font(.system(size: 11.5)).foregroundStyle(.secondary) }
                 Spacer()
-                Button(tr("Restaurar las originales", "Restore defaults")) {
+                Button(tr("Restaurar las originales", "Restore defaults", "既定に戻す")) {
                     state.rulesText = Rules.defaultText
                     state.rulesSaved = false
                 }
-                Button(tr("Descartar cambios", "Revert")) {
+                Button(tr("Descartar cambios", "Revert", "変更を破棄")) {
                     state.rulesText = Rules.load()
                     state.rulesSaved = true
                 }
                 .disabled(state.rulesSaved)
-                Button(tr("Guardar", "Save")) { state.saveRules() }
+                Button(tr("Guardar", "Save", "保存")) { state.saveRules() }
                     .keyboardShortcut("s", modifiers: .command)
                     .disabled(state.rulesSaved)
             }
@@ -276,22 +283,22 @@ struct AboutView: View {
                 .frame(width: 112, height: 112)
             Text(AppInfo.name)
                 .font(.system(size: 22, weight: .semibold))
-            Text(tr("Versión \(AppInfo.version)", "Version \(AppInfo.version)"))
+            Text(tr("Versión \(AppInfo.version)", "Version \(AppInfo.version)", "バージョン \(AppInfo.version)"))
                 .foregroundStyle(.secondary)
             Text(tr("Chat con modelos de lenguaje locales servidos por Ollama.",
-                    "Chat with local language models served by Ollama."))
+                    "Chat with local language models served by Ollama.", "Ollama が提供するローカル言語モデルとチャットできます。"))
                 .font(.system(size: 12.5))
                 .multilineTextAlignment(.center)
             Divider().padding(.vertical, 4)
-            Text(tr("Autor: \(AppInfo.author)", "Author: \(AppInfo.author)"))
+            Text(tr("Autor: \(AppInfo.author)", "Author: \(AppInfo.author)", "作成者: \(AppInfo.author)"))
                 .font(.system(size: 12.5))
             Text("Copyright © 2026 \(AppInfo.author)")
                 .font(.system(size: 11.5)).foregroundStyle(.secondary)
             Text(tr("Licencia: GNU GPL, solo la versión 2 (GPL-2.0-only).",
-                    "License: GNU GPL, version 2 only (GPL-2.0-only)."))
+                    "License: GNU GPL, version 2 only (GPL-2.0-only).", "ライセンス: GNU GPL バージョン 2 のみ (GPL-2.0-only)。"))
                 .font(.system(size: 11.5)).foregroundStyle(.secondary)
             Text(tr("Este programa es software libre y se distribuye SIN NINGUNA GARANTÍA.",
-                    "This program is free software and comes with ABSOLUTELY NO WARRANTY."))
+                    "This program is free software and comes with ABSOLUTELY NO WARRANTY.", "このプログラムはフリーソフトウェアであり、一切の保証はありません。"))
                 .font(.system(size: 11)).foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
         }

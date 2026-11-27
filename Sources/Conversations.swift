@@ -79,7 +79,7 @@ struct Conversation: Codable, Identifiable, Hashable {
     var messages: [ChatMessage] = []
 
     var displayTitle: String {
-        title.isEmpty ? tr("Conversación nueva", "New conversation") : title
+        title.isEmpty ? tr("Conversación nueva", "New conversation", "新しい会話") : title
     }
 
     /// Title = the first user message, trimmed to one short line.

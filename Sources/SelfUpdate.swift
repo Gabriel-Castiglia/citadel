@@ -202,6 +202,7 @@ final class SelfUpdate: NSObject, @unchecked Sendable {
         "BadApp": ["the app in the package is not this app, or not the announced version, or not signed like this one.",
                    "la app del paquete no es esta, o no es la versión anunciada, o no está firmada como esta.",
                    "パッケージ内のアプリがこのアプリではないか、告知されたバージョンではないか、同じ署名ではありません。"],
+        "Busy": ["A check for updates of %@ is already under way.", "Ya se están buscando actualizaciones de %@.", "%@ のアップデートをすでに確認中です。"],
         "BadReply": ["GitHub's answer could not be read.", "No se pudo leer la respuesta de GitHub.", "GitHub の応答を読み取れませんでした。"],
         "Http": ["GitHub answered %ld.", "GitHub respondió %ld.", "GitHub の応答: %ld"],
     ]
@@ -219,7 +220,11 @@ final class SelfUpdate: NSObject, @unchecked Sendable {
     }
 
     func check(interactive: Bool) {
-        guard !busy else { return }
+        // Asked for again while a check or an update is under way: say so instead of doing nothing (as on Windows).
+        guard !busy else {
+            if interactive { let text = T("Busy", appName); Task { @MainActor in self.say(text) } }
+            return
+        }
         busy = true
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: SelfUpdate.stampKey)
         Task { @MainActor in

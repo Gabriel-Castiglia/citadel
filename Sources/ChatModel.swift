@@ -114,7 +114,20 @@ final class ChatModel: ObservableObject {
         }
     }
 
+    private var refreshTask: Task<Void, Never>?
+
+    /// Asks Ollama for its models. A check already under way is not doubled: with Ollama or the SSH
+    /// computer unreachable each one waits for its timeout, and they would pile up. A caller that comes
+    /// while one runs waits for that one and gets its result.
     func refreshStatus() async {
+        if let running = refreshTask { await running.value; return }
+        let task = Task { await self.readStatus() }
+        refreshTask = task
+        await task.value
+        refreshTask = nil
+    }
+
+    private func readStatus() async {
         do {
             let list = try await client.listModels()
             models = list
@@ -174,7 +187,7 @@ final class ChatModel: ObservableObject {
     }
 
     func delete(_ id: UUID) {
-        if id == selectedID { stop() }
+        if id == selectedID || id == answeringID { stop() }   // a deleted conversation's answer stops too
         conversations.removeAll { $0.id == id }
         ConversationStore.delete(id)
         if selectedID == id {
@@ -215,16 +228,42 @@ final class ChatModel: ObservableObject {
     func attachFile(_ url: URL) {
         let ext = url.pathExtension.lowercased()
         guard ["txt", "md", "markdown", "text"].contains(ext) else {
-            toast = tr("Solo se pueden adjuntar archivos .txt o .md.", "Only .txt and .md files can be attached.")
+            toast = tr("Solo se pueden adjuntar archivos .txt o .md.", "Only .txt and .md files can be attached.", "添付できるのは .txt と .md のファイルだけです。")
             return
         }
-        guard let text = (try? String(contentsOf: url, encoding: .utf8))
-            ?? (try? String(contentsOf: url, encoding: .isoLatin1))
-        else {
-            toast = tr("No se pudo leer el archivo.", "Could not read the file.")
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        guard size <= Self.maxAttachmentBytes else {
+            let name = url.lastPathComponent
+            toast = tr("\(name) pesa más de 2 MB: no se adjuntó.", "\(name) is larger than 2 MB and was not attached.",
+                       "\(name) は 2 MB を超えているため、添付しませんでした。")
+            return
+        }
+        guard let data = try? Data(contentsOf: url), let text = Self.text(of: data) else {
+            toast = tr("No se pudo leer el archivo.", "Could not read the file.", "ファイルを読み込めませんでした。")
             return
         }
         attachments.append(Attachment(name: url.lastPathComponent, text: text))
+    }
+
+    /// The largest attachment: 2 MB, already more text than a local model can take in at once.
+    static let maxAttachmentBytes = 2 * 1024 * 1024
+
+    /// The text of an attachment in its own encoding: a byte order mark, UTF-8, or else what Foundation
+    /// recognises among the encodings of Japanese, Western and Central European files, so a file that is
+    /// not UTF-8 does not show broken characters (as Citadel for Windows does with the system code page).
+    static func text(of data: Data) -> String? {
+        if data.starts(with: [0xEF, 0xBB, 0xBF]) { return String(data: data.dropFirst(3), encoding: .utf8) }
+        if data.starts(with: [0xFF, 0xFE]) { return String(data: data.dropFirst(2), encoding: .utf16LittleEndian) }
+        if data.starts(with: [0xFE, 0xFF]) { return String(data: data.dropFirst(2), encoding: .utf16BigEndian) }
+        if let s = String(data: data, encoding: .utf8) { return s }
+        var converted: NSString?
+        var lossy = ObjCBool(false)
+        let raw = NSString.stringEncoding(for: data, encodingOptions: [
+            .suggestedEncodingsKey: [String.Encoding.shiftJIS.rawValue, String.Encoding.japaneseEUC.rawValue,
+                                     String.Encoding.windowsCP1252.rawValue, String.Encoding.windowsCP1250.rawValue],
+            .allowLossyKey: false], convertedString: &converted, usedLossyConversion: &lossy)
+        if raw != 0, let s = converted as String? { return s }
+        return String(data: data, encoding: .windowsCP1252)
     }
 
     func send() {
@@ -297,6 +336,18 @@ final class ChatModel: ObservableObject {
         return out
     }
 
+    /// How many characters at the end of `s` are the start of a <think> or </think> tag that the next
+    /// piece of the answer will finish (0 when none): they wait for it instead of showing as text.
+    static func partialTag(at s: String) -> Int {
+        for tag in ["</think>", "<think>"] {
+            for k in stride(from: tag.count - 1, through: 1, by: -1) where s.hasSuffix(tag.prefix(k)) { return k }
+        }
+        return 0
+    }
+
+    /// The conversation whose answer is being written.
+    private(set) var answeringID: UUID?
+
     private func runAnswer(in id: UUID) {
         guard let conversation = conversations.first(where: { $0.id == id }) else { return }
         let think = reason && canReason
@@ -308,6 +359,7 @@ final class ChatModel: ObservableObject {
         append(answer, to: id)
 
         isGenerating = true
+        answeringID = id
         receivedFirstToken = false
         receivingThinking = false
         startDate = Date()
@@ -325,13 +377,19 @@ final class ChatModel: ObservableObject {
             defer { ticker.cancel() }
 
             var inThinkTag = false
+            var carry = ""      // the start of a <think> or </think> tag cut at the end of a piece
             var final: ChatChunk?
             do {
                 let stream = client.streamChat(model: model, messages: wire, think: think,
                                                numPredict: think ? 8000 : 3000)
                 for try await chunk in stream {
                     var thinking = chunk.message?.thinking ?? ""
-                    var content = chunk.message?.content ?? ""
+                    var content = carry + (chunk.message?.content ?? "")
+                    carry = ""
+                    if chunk.done != true {
+                        let held = Self.partialTag(at: content)
+                        if held > 0 { carry = String(content.suffix(held)); content.removeLast(held) }
+                    }
                     // Fallback for models that put their reasoning inside <think> tags.
                     if content.contains("<think>") {
                         inThinkTag = true
@@ -392,6 +450,7 @@ final class ChatModel: ObservableObject {
             }
             self.elapsed = seconds
             self.isGenerating = false
+            self.answeringID = nil
             self.receivingThinking = false
             self.streamTask = nil
             self.save(id)
@@ -418,14 +477,14 @@ final class ChatModel: ObservableObject {
     func readyToQuitForUpdate() async -> Bool {
         if isGenerating || isDraftingMemory {
             let a = NSAlert()
-            a.messageText = tr("Hay una respuesta en curso", "An answer is being written")
+            a.messageText = tr("Hay una respuesta en curso", "An answer is being written", "回答を作成中です")
             a.informativeText = tr("Citadel se cerrará para instalar la versión nueva. La respuesta se guarda en la conversación tanto si esperas a que termine como si la detienes.",
-                                   "Citadel will close to install the new version. The answer is saved in the conversation whether you wait for it to finish or stop it.")
-            a.addButton(withTitle: tr("Esperar a que termine", "Wait for it to finish"))
-            a.addButton(withTitle: tr("Detenerla y actualizar", "Stop it and update"))
-            a.addButton(withTitle: tr("Cancelar", "Cancel"))
+                                   "Citadel will close to install the new version. The answer is saved in the conversation whether you wait for it to finish or stop it.", "新しいバージョンをインストールするため、Citadel を終了します。完了を待っても停止しても、回答は会話に保存されます。")
+            a.addButton(withTitle: tr("Esperar a que termine", "Wait for it to finish", "完了を待つ"))
+            a.addButton(withTitle: tr("Detenerla y actualizar", "Stop it and update", "停止して更新"))
+            a.addButton(withTitle: tr("Cancelar", "Cancel", "キャンセル"))
             switch a.runModal() {
-            case .alertFirstButtonReturn: toast = tr("La actualización espera a que termine la respuesta…", "The update waits for the answer to finish…")
+            case .alertFirstButtonReturn: toast = tr("La actualización espera a que termine la respuesta…", "The update waits for the answer to finish…", "回答が終わるまでアップデートを待っています…")
             case .alertSecondButtonReturn: stop()
             default: return false
             }
@@ -471,16 +530,16 @@ final class ChatModel: ObservableObject {
     func loadMemory(topic: String) {
         guard let id = selectedID else { return }
         guard !topic.isEmpty else {
-            notice(tr("Uso: /mem <tema>", "Usage: /mem <topic>"))
+            notice(tr("Uso: /mem <tema>", "Usage: /mem <topic>", "使い方: /mem <トピック>"))
             return
         }
         guard let entry = MemoryStore.bestMatch(for: topic) else {
-            notice(tr("Ninguna memoria coincide con «\(topic)».", "No memory matches “\(topic)”."))
+            notice(tr("Ninguna memoria coincide con «\(topic)».", "No memory matches “\(topic)”.", "「\(topic)」に一致するメモリはありません。"))
             return
         }
         guard let text = MemoryStore.read(entry.file) else {
             notice(tr("El índice nombra \(entry.file), pero el archivo no existe.",
-                      "The index lists \(entry.file), but the file does not exist."))
+                      "The index lists \(entry.file), but the file does not exist.", "インデックスに \(entry.file) がありますが、ファイルが存在しません。"))
             return
         }
         var m = ChatMessage(role: .memory, content: text)
@@ -513,7 +572,7 @@ final class ChatModel: ObservableObject {
 
     func startMemoryDraft() {
         guard let c = current, c.messages.contains(where: { $0.role == .user || $0.role == .assistant }) else {
-            notice(tr("No hay nada que guardar todavía.", "There is nothing to save yet."))
+            notice(tr("No hay nada que guardar todavía.", "There is nothing to save yet.", "保存する内容はまだありません。"))
             return
         }
         let model = selectedModel
@@ -528,7 +587,7 @@ final class ChatModel: ObservableObject {
                 self.memoryDraft = draft
             } catch is CancellationError {
             } catch {
-                self?.notice(tr("No se pudo preparar la memoria: ", "Could not prepare the memory: ") + error.localizedDescription)
+                self?.notice(tr("No se pudo preparar la memoria: ", "Could not prepare the memory: ", "メモリを準備できませんでした: ") + error.localizedDescription)
             }
             self?.isDraftingMemory = false
         }
@@ -542,7 +601,7 @@ final class ChatModel: ObservableObject {
             d.file = MemoryStore.sanitizeFileName(d.file)
             try MemoryStore.save(d)
             memoryDraft = nil
-            notice(tr("Memoria guardada y verificada en el disco: \(d.file)", "Memory saved and verified on disk: \(d.file)"))
+            notice(tr("Memoria guardada y verificada en el disco: \(d.file)", "Memory saved and verified on disk: \(d.file)", "メモリを保存し、ディスク上で確認しました: \(d.file)"))
             return true
         } catch {
             toast = error.localizedDescription

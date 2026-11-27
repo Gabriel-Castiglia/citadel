@@ -55,7 +55,22 @@ enum SelfTest {
             check(h.before.hasPrefix("…") && h.after.hasSuffix("…") && h.before.hasSuffix(" ") && h.after.hasPrefix(" "),
                   "search: the fragment is cut at spaces, with … on both sides")
         } else { check(false, "search: a match inside a long message") }
-        let md = MarkdownExport.render(c, spanish: false, zone: TimeZone(identifier: "UTC")!, version: "9.9.9")
+        // 1.4.0: what Citadel for Windows 1.4.0 fixed, on the Mac
+        var many = Conversation()
+        many.messages = (0 ..< 5).map { _ in ChatMessage(role: .user, content: "aguja") }
+        check(ConversationSearch.find(Array(repeating: many, count: 41), "aguja").count == 200, "search: at most 200 results, not 201")
+        check(ChatModel.partialTag(at: "hola <thi") == 4 && ChatModel.partialTag(at: "fin </th") == 4
+              && ChatModel.partialTag(at: "a < b") == 0 && ChatModel.partialTag(at: "listo") == 0,
+              "<think>: the start of a tag cut at the end of a piece waits for the next one")
+        let sjis = Data([0x93, 0xFA, 0x96, 0x7B, 0x8C, 0xEA])   // 日本語 in Shift_JIS
+        check(ChatModel.text(of: sjis) == "日本語", "attachments: a Shift_JIS file is read in its own encoding")
+        check(ChatModel.text(of: Data([0xEF, 0xBB, 0xBF, 0x61])) == "a" && ChatModel.text(of: Data([0xFF, 0xFE, 0x61, 0x00])) == "a",
+              "attachments: byte order marks of UTF-8 and UTF-16")
+        check(ChatModel.text(of: Data("cami\u{F3}n".utf8)) == "camión", "attachments: UTF-8 stays UTF-8")
+        check(ChatModel.maxAttachmentBytes == 2 * 1024 * 1024, "attachments: at most 2 MB per file")
+        check(MarkdownExport.render(c, language: "ja", zone: TimeZone(identifier: "UTC")!, version: "9.9.9").contains("## ユーザー\n"),
+              "export: headings in Japanese")
+        let md = MarkdownExport.render(c, language: "en", zone: TimeZone(identifier: "UTC")!, version: "9.9.9")
         check(md.hasPrefix("# Viaje en camión: notas/ideas\n"), "export: the title is the heading")
         check(md.contains("## User\n") && md.contains("## Assistant\n") && !md.contains("camion en un aviso"), "export: one heading per turn, no app notes")
         check(md.contains("`````text\nx ```` y\n`````"), "export: an attachment in a fence longer than any inside it")

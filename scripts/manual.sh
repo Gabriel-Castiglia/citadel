@@ -68,3 +68,4 @@ HTML
 
 build README.md    en "Citadel · Manual"            "Local AI chat for macOS · version"     docs/Citadel-manual-en.pdf
 build README.es.md es "Citadel · Manual de usuario" "Chat con IA local para macOS · versión" docs/Citadel-manual-es.pdf
+build README.ja.md ja "Citadel · ユーザーマニュアル"   "macOS 用ローカル AI チャット · バージョン"   docs/Citadel-manual-ja.pdf

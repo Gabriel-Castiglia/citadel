@@ -1,8 +1,8 @@
 # Citadel
 
-Gabriel Castiglia · November 27, 2026 · version 1.3.2 · GPL-2.0 license
+Gabriel Castiglia · November 27, 2026 · version 1.4.0 · GPL-2.0 license
 
-English · [Español](README.es.md)
+English · [Español](README.es.md) · [日本語](README.ja.md)
 
 Repository: <https://github.com/Gabriel-Castiglia/citadel>
 
@@ -12,7 +12,7 @@ Citadel is a chat app for macOS that talks to language models running on the sam
 [Ollama](https://ollama.com). Nothing you write leaves the computer: the app only connects to Ollama
 at `127.0.0.1:11434`, unless you choose to reach Ollama on another computer of yours through SSH (see
 [Ollama on another computer](#ollama-on-another-computer)). It is written in Swift and SwiftUI, builds with the Apple Command Line Tools
-alone (no Xcode), and its interface is in English and Spanish. A Windows version with the same
+alone (no Xcode), and its interface is in English, Spanish and Japanese. A Windows version with the same
 features lives in its own repository, <https://github.com/Gabriel-Castiglia/citadel-windows>.
 
 Citadel is a chat window, not an agent. The model cannot open files, run commands or browse the web.
@@ -52,7 +52,7 @@ second. Ollama loads it with the first message and unloads it after 5 minutes wi
 
 Download `Citadel-<version>.pkg` from the
 [releases page](https://github.com/Gabriel-Castiglia/citadel/releases) and open it. The installer is
-in English or Spanish, following the language of the Mac; it shows a welcome page, the license, and
+in English, Spanish or Japanese, following the language of the Mac; it shows a welcome page, the license, and
 installs `Citadel.app` in `/Applications`, quitting a running copy first. Installing a newer package
 over an older one updates Citadel; conversations, rules, memories and settings are kept.
 
@@ -63,7 +63,7 @@ package; the installed app opens normally. The `SHA256SUMS.txt` file of each rel
 the download first:
 
 ```
-shasum -a 256 Citadel-1.3.2.pkg
+shasum -a 256 Citadel-1.4.0.pkg
 ```
 
 ### From source
@@ -112,15 +112,17 @@ button for the whole answer, the model, its speed in tokens per second and the s
 
 The sidebar lists the conversations, newest first. ⌘N or the pencil button starts a new one, and its
 title is the first line of the first message. Right-click a conversation to rename it or delete it;
-deleting asks first and removes its file from disk. The search field (⌘F) filters by title and also
+deleting asks first and removes its file from disk. Deleting the conversation that is answering also
+stops the answer. The search field (⌘F) filters by title and also
 looks in the text of every saved conversation, ignoring case, accents and line breaks: under *In the
 messages* each match shows the conversation, the date and the words around it, highlighted, and a click
-opens the conversation at that message, which blinks once.
+opens the conversation at that message, which blinks once. At most 200 results are shown. The dates of the list
+follow the interface language.
 
 The share button in the header, or the menu of a conversation in the sidebar, exports it to Markdown:
 title, date, model and each turn under its own heading, with code blocks intact, attachments and
 reasoning folded in `<details>`. With *Open after exporting* on, the file opens in the app macOS uses for
-`.md` files.
+`.md` files. The labels in the file (Date, Model…) are in the interface language.
 
 ### Updates
 
@@ -131,7 +133,7 @@ opened), checks that the app inside has the same identifier, the announced versi
 signature, waits for or stops an answer in progress as you choose, and quits; the new app takes the place
 of the old one and opens with the text being typed and the open conversation. A copy that is not
 `/Applications/Citadel.app` is offered the download page; one installed by another user opens the checked
-package in Installer.
+package in Installer. Asked again while a check is already under way, Citadel says so.
 
 ### Models
 
@@ -159,7 +161,8 @@ The line under the text box says whether Ollama answers and where (on this Mac, 
 computer through SSH), whether the model is loaded or will load with the next message, what the
 model is doing (loading, reasoning, writing) with the seconds elapsed, and the speed of the last
 answer. When Ollama does not answer, the same line gives the fix: `brew services start ollama`, or
-the SSH error.
+the SSH error. An answer that cannot be read (from another program on Ollama's port, for example) is reported
+in plain words.
 
 ### Reason
 
@@ -180,7 +183,9 @@ connection and Ollama stops generating; what was written so far stays, marked "S
 ### Attachments
 
 Drag a `.txt` or `.md` file onto the text box to attach its text to the next message; a chip shows the
-file name and its length, with a button to remove it.
+file name and its length, with a button to remove it. A file can be at most 2 MB; a larger one is not
+attached, with a message. The text is read in its own encoding (byte order mark, UTF-8, or one macOS recognises,
+such as Shift_JIS or Windows-1252), so a file that is not UTF-8 does not show broken characters.
 
 ### Memories
 
@@ -210,15 +215,16 @@ anything, so the model only drafts the text and the app does the writing and the
 
 ### Settings
 
-Citadel → Settings… (⌘,) has three tabs.
+Citadel → Settings… (⌘,) has four tabs.
 
 ![Settings, Memories tab](docs/images/settings-en.png)
 
 | Tab | What it holds |
 |---|---|
 | Memories | The memory folder (Choose…, or Default to go back to `~/Library/Application Support/Citadel/memories`), the list of memories with their index lines, Open folder, Show in Finder for each memory, and Delete, which asks first and removes the file and its index line. |
-| Rules | The rules sent at the start of every request, editable. Save (⌘S) writes them; Revert discards the changes; Restore defaults puts back the original rules. |
+| Rules | The rules sent at the start of every request, editable. Save (⌘S) writes them; Revert discards the changes; Restore defaults puts back the original rules. Changing the language with Settings open keeps what is being edited. |
 | Ollama | Where Ollama runs: on this Mac, or on another computer through SSH (see [Ollama on another computer](#ollama-on-another-computer)). Apply and test connects at once and lists the models found. |
+| Appearance | The look of the window and the twelve colours (see [Theme and colour](#theme-and-colour)). |
 
 Any folder can be the memory folder, including one that another tool also uses, as long as it keeps
 the same `_index.md` format.
@@ -246,9 +252,10 @@ cloud, which it cannot know.
 
 ### Language
 
-The interface is in English on the first start. The globe button at the top right, next to the model
-menu, shows the current language and switches between English and Español; the Language menu in the
-menu bar (Idioma, in Spanish) does the same. The change applies at once and is remembered. The menus
+On the first start the interface is in the language of the Mac when it is Spanish or Japanese, and in English
+otherwise. The globe button at the top right, next to the model menu, shows the current language and switches
+between English, Español and 日本語; the Language menu in the menu bar (Idioma in Spanish, 言語 in Japanese) does
+the same. The change applies at once and is remembered. The menus
 that macOS adds to every app (Edit, View, Window, Help) follow the same language from the next
 launch, because macOS reads it when the app starts. The language of the interface does not change
 the language of the answers: the model answers in the language you write in.
@@ -293,7 +300,7 @@ If the connection drops, Citadel opens it again with the next request.
 
 ![About Citadel](docs/images/about-en.png)
 
-### Keyboard
+### Keyboard and VoiceOver
 
 | Keys | Action |
 |---|---|
@@ -304,6 +311,9 @@ If the connection drops, Citadel opens it again with the next request.
 | ⌘. | Stop the answer |
 | ⌘, | Settings |
 | ⌘S | Save the rules (Rules tab) |
+
+Buttons that show only an icon (new conversation, export, send, stop, Show in Finder and Delete of each memory,
+refresh) have a name that VoiceOver reads.
 
 ## Files
 
@@ -316,7 +326,8 @@ If the connection drops, Citadel opens it again with the next request.
 | Settings (language, model, Reason, memory folder, SSH destination, window size) | preferences domain `io.github.gabriel-castiglia.citadel` |
 | Signing keychain | `~/Library/Keychains/citadel-signing.keychain-db` |
 
-Files are written in UTF-8 without a byte order mark. Conversations are plain JSON and can be read,
+Files are written in UTF-8 without a byte order mark, whole before they replace the old one, so a power cut
+cannot leave an empty file. Conversations are plain JSON and can be read,
 copied or deleted with Citadel closed.
 
 ## Signing
@@ -340,7 +351,7 @@ is not an Apple Developer ID, so Citadel is meant to be built where it runs.
 | `scripts/firma.sh` | Signs `build/Citadel.app` (see [Signing](#signing)). |
 | `scripts/instalar.sh` | Runs both, then installs to `/Applications`. |
 | `scripts/paquete.sh` | Runs both, then builds the installer package `build/Citadel-<version>.pkg` from `instalador/`. |
-| `scripts/manual.sh` | Builds the PDF manuals in `docs/` from `README.md` and `README.es.md`. |
+| `scripts/manual.sh` | Builds the PDF manuals in `docs/` from `README.md`, `README.es.md` and `README.ja.md`. |
 | `icono/render.sh` | Renders `icono/icono.svg` to `icono/icono-1024.png` with headless Chrome. |
 
 The app has two modes for maintenance. Both take `--data-folder <folder>` to use a folder other than
@@ -352,14 +363,14 @@ The app has two modes for maintenance. Both take `--data-folder <folder>` to use
   run against a memory folder in use.
 - `Citadel --screenshot <file.png>` saves a picture of the main window and quits; with
   `--screenshot-view about`, `settings` or `save` it pictures that window instead (`save` asks the
-  model for a real draft of the selected conversation). Adding `-language es` shows the Spanish
-  interface. The images in `docs/images` were made this way.
+  model for a real draft of the selected conversation). Adding `-language es` or `-language ja` shows
+  the interface in that language. The images in `docs/images` were made this way.
 
 | Folder | Contents |
 |---|---|
 | `Sources` | The app: SwiftUI views, the Ollama client, conversations, memories, settings, self-test. |
 | `scripts` | Build, signing, installation, package and manuals. |
-| `instalador` | The package definition: `Distribution.xml`, the script that quits a running copy, and the welcome and conclusion pages in English and Spanish. |
+| `instalador` | The package definition: `Distribution.xml`, the script that quits a running copy, and the welcome and conclusion pages in English, Spanish and Japanese. |
 | `icono` | The icon, as SVG and as a 1024-pixel PNG. |
 | `docs` | PDF manuals, images and the manual stylesheet. |
 
@@ -372,7 +383,7 @@ The app has two modes for maintenance. Both take `--data-folder <folder>` to use
 - Answers arrive from `/api/chat` as one JSON object per line. Stop cancels the task that reads them,
   which closes the connection; Ollama then cancels the generation, as its log shows
   (`srv stop: cancel task`). Models that write their reasoning between `<think>` tags instead of in
-  the `thinking` field are handled too.
+  the `thinking` field are handled too, even when a tag arrives split between two pieces of the answer.
 - On 15 hard questions of counting, arithmetic, logic and dates, asked twice each, Qwen3 8B answered
   9 of 30 correctly without reasoning and 26 of 30 with it. With reasoning, the median answer took
   38 seconds and the slowest 172. Sometimes the model loops in its reasoning until it reaches the
@@ -386,7 +397,8 @@ The app has two modes for maintenance. Both take `--data-folder <folder>` to use
   `"think": false` to those models, whatever the state of the Reason button.
 - The SSH tunnel runs `ssh -N` with `BatchMode=yes`, `ExitOnForwardFailure=yes` and keepalives every
   15 seconds; Citadel waits until the local end accepts connections before sending. If Citadel is
-  killed instead of quit, the next start ends the tunnel it left behind.
+  killed instead of quit, the next start ends the tunnel it left behind. With Ollama or the SSH computer
+  unreachable, the status checks do not pile up.
 
 ## Credits
 

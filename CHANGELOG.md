@@ -2,6 +2,41 @@
 
 All notable changes to Citadel. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.4.0 - 2026-11-27
+
+What Citadel 1.4.0 for Windows brought, where it applies on the Mac.
+
+### Added
+
+- **Japanese interface**: Citadel speaks Japanese too (日本語 in the globe button and the Language menu), with the texts
+  of Citadel for Windows where both have the same one. The installer pages are in Japanese on a Mac in Japanese.
+- On the first start the interface follows the Mac when it is in Spanish or Japanese, and is in English otherwise.
+- The dates of the conversation list and the labels of an exported conversation follow the interface language.
+- Buttons that show only an icon (new conversation, export, send, stop, Show in Finder and Delete of a memory, refresh)
+  have a name that VoiceOver reads.
+- README, PDF manual and pictures in Japanese; every picture of the manuals made again with this version.
+
+### Changed
+
+- An attachment can be at most 2 MB; a larger file is refused with a message. The text of an attachment is read in its
+  own encoding (byte order mark, UTF-8, or one macOS recognises, such as Shift_JIS or Windows-1252), so a file that is
+  not UTF-8 no longer shows broken characters.
+- `--screenshot` shows the paths of the folder given with `--data-folder` as `~/Library/Application Support/Citadel`, so
+  the pictures of the manuals show the real path.
+- Asking for an update check while one is under way says so instead of doing nothing.
+
+### Fixed
+
+- Changing the language with Settings open discarded rules being edited and not yet saved.
+- A `<think>` tag that arrived split between two pieces of an answer was shown as text and the reasoning was mixed
+  with the answer.
+- Deleting the conversation that was answering, while another one was selected, let its answer go on.
+- With Ollama or the SSH computer unreachable, the status checks could pile up; a check that comes while another one
+  runs now waits for it.
+- An answer from Ollama that cannot be read (for example from another program on its port) now gives the message
+  "Ollama returned an answer that cannot be read." instead of a technical error.
+- The search in the messages shows at most 200 results, as intended (it could show 201).
+
 ## 1.3.2 - 2026-11-27
 
 The same number as Citadel 1.3.2 for Windows.

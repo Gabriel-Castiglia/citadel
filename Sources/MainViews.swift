@@ -72,14 +72,14 @@ struct SidebarView: View {
                         .font(.system(size: 15, weight: .medium))
                 }
                 .buttonStyle(.borderless)
-                .help(tr("Conversación nueva (⌘N)", "New conversation (⌘N)"))
+                .helpAndLabel(tr("Conversación nueva (⌘N)", "New conversation (⌘N)", "新しい会話 (⌘N)"))
             }
             .padding(.top, 40)
             .padding(.horizontal, 16)
 
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary).font(.system(size: 12))
-                TextField(tr("Buscar", "Search"), text: $model.search)
+                TextField(tr("Buscar", "Search", "検索"), text: $model.search)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .focused($searchFocused)
@@ -101,17 +101,17 @@ struct SidebarView: View {
                             .contentShape(Rectangle())
                             .onTapGesture { model.select(c.id) }
                             .contextMenu {
-                                Button(tr("Renombrar…", "Rename…")) {
+                                Button(tr("Renombrar…", "Rename…", "名前の変更…")) {
                                     state.renameText = c.displayTitle
                                     state.renaming = c
                                 }
                                 ExportMenuItems(conversation: c)
                                 Divider()
-                                Button(tr("Eliminar…", "Delete…"), role: .destructive) { state.deleting = c }
+                                Button(tr("Eliminar…", "Delete…", "削除…"), role: .destructive) { state.deleting = c }
                             }
                     }
                     if !model.messageHits.isEmpty {
-                        Text(tr("En los mensajes", "In the messages")
+                        Text(tr("En los mensajes", "In the messages", "メッセージ内")
                              + " (\(model.messageHits.count)\(model.messageHits.count >= ChatModel.maxHits ? "+" : ""))")
                             .font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
                             .padding(.horizontal, 10).padding(.top, 12).padding(.bottom, 2)
@@ -122,7 +122,7 @@ struct SidebarView: View {
                         }
                     }
                     if model.filteredConversations.isEmpty, model.messageHits.isEmpty, !model.search.isEmpty {
-                        Text(tr("Sin resultados", "No results"))
+                        Text(tr("Sin resultados", "No results", "一致する結果はありません"))
                             .font(.system(size: 12)).foregroundStyle(.secondary)
                             .padding(12)
                     }
@@ -132,7 +132,7 @@ struct SidebarView: View {
 
             Divider().opacity(0.4)
             SettingsLink {
-                Label(tr("Ajustes", "Settings"), systemImage: "gearshape")
+                Label(tr("Ajustes", "Settings", "設定"), systemImage: "gearshape")
                     .font(.system(size: 13))
             }
             .buttonStyle(.borderless)
@@ -140,25 +140,25 @@ struct SidebarView: View {
             .padding(.bottom, 14)
             .padding(.top, 2)
         }
-        .alert(tr("Renombrar conversación", "Rename conversation"),
+        .alert(tr("Renombrar conversación", "Rename conversation", "会話の名前の変更"),
                isPresented: Binding(get: { state.renaming != nil }, set: { if !$0 { state.renaming = nil } })) {
-            TextField(tr("Título", "Title"), text: $state.renameText)
-            Button(tr("Cancelar", "Cancel"), role: .cancel) { state.renaming = nil }
-            Button(tr("Renombrar", "Rename")) {
+            TextField(tr("Título", "Title", "タイトル"), text: $state.renameText)
+            Button(tr("Cancelar", "Cancel", "キャンセル"), role: .cancel) { state.renaming = nil }
+            Button(tr("Renombrar", "Rename", "変更")) {
                 if let c = state.renaming { model.rename(c.id, to: state.renameText) }
                 state.renaming = nil
             }
         }
-        .alert(tr("¿Eliminar esta conversación?", "Delete this conversation?"),
+        .alert(tr("¿Eliminar esta conversación?", "Delete this conversation?", "この会話を削除しますか?"),
                isPresented: Binding(get: { state.deleting != nil }, set: { if !$0 { state.deleting = nil } })) {
-            Button(tr("Cancelar", "Cancel"), role: .cancel) { state.deleting = nil }
-            Button(tr("Eliminar", "Delete"), role: .destructive) {
+            Button(tr("Cancelar", "Cancel", "キャンセル"), role: .cancel) { state.deleting = nil }
+            Button(tr("Eliminar", "Delete", "削除"), role: .destructive) {
                 if let c = state.deleting { model.delete(c.id) }
                 state.deleting = nil
             }
         } message: {
             Text(tr("«\(state.deleting?.displayTitle ?? "")» se borrará del disco. No se puede deshacer.",
-                    "“\(state.deleting?.displayTitle ?? "")” will be removed from disk. This cannot be undone."))
+                    "“\(state.deleting?.displayTitle ?? "")” will be removed from disk. This cannot be undone.", "「\(state.deleting?.displayTitle ?? "")」をディスクから削除します。元に戻すことはできません。"))
         }
     }
 }
@@ -172,7 +172,8 @@ struct HitRow: View {
             HStack(spacing: 6) {
                 Text(hit.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
                 Spacer(minLength: 4)
-                Text(hit.date, format: .dateTime.day().month(.abbreviated)).font(.system(size: 10.5)).foregroundStyle(.secondary)
+                // Text(date, format:) would use the Mac's locale; the formatted string follows the interface language.
+                Text(hit.date.formatted(.dateTime.day().month(.abbreviated).locale(L10n.shared.locale))).font(.system(size: 10.5)).foregroundStyle(.secondary)
             }
             (Text(hit.before) + Text(hit.match).bold().foregroundColor(.accentColor) + Text(hit.after))
                 .font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(2)
@@ -187,9 +188,9 @@ struct ExportMenuItems: View {
     @AppStorage(MarkdownExport.openAfterKey) private var openAfter = false
 
     var body: some View {
-        Button(tr("Exportar a Markdown…", "Export to Markdown…")) { MarkdownExport.export(conversation) }
+        Button(tr("Exportar a Markdown…", "Export to Markdown…", "Markdown にエクスポート…")) { MarkdownExport.export(conversation) }
             .disabled(conversation.messages.isEmpty)
-        Toggle(tr("Abrir después de exportar", "Open after exporting"), isOn: $openAfter)
+        Toggle(tr("Abrir después de exportar", "Open after exporting", "エクスポート後に開く"), isOn: $openAfter)
     }
 }
 
@@ -202,7 +203,7 @@ struct ConversationRow: View {
             Text(conversation.displayTitle)
                 .font(.system(size: 13, weight: selected ? .medium : .regular))
                 .lineLimit(1)
-            Text(conversation.updated, format: .dateTime.day().month(.abbreviated).hour().minute())
+            Text(conversation.updated.formatted(.dateTime.day().month(.abbreviated).hour().minute().locale(L10n.shared.locale)))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
         }
@@ -263,7 +264,7 @@ struct ChatHeader: View {
                     Image(systemName: "square.and.arrow.up")
                 }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .help(tr("Exportar a Markdown", "Export to Markdown"))
+                .helpAndLabel(tr("Exportar a Markdown", "Export to Markdown", "Markdown にエクスポート"))
             }
             LanguagePicker()
             ModelPicker(model: model)
@@ -276,11 +277,12 @@ struct ChatHeader: View {
 
 /// Interface language, shown next to the model so it is easy to find.
 struct LanguagePicker: View {
+    static let languages = [("en", "English"), ("es", "Español"), ("ja", "日本語")]
     @ObservedObject var lang = L10n.shared
 
     var body: some View {
         Menu {
-            ForEach([("en", "English"), ("es", "Español")], id: \.0) { code, name in
+            ForEach(LanguagePicker.languages, id: \.0) { code, name in
                 Button {
                     lang.language = code
                 } label: {
@@ -290,7 +292,7 @@ struct LanguagePicker: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "globe")
-                Text(lang.isSpanish ? "Español" : "English")
+                Text(LanguagePicker.languages.first { $0.0 == lang.language }?.1 ?? "English")
             }
             .font(.system(size: 12, weight: .medium))
         }
@@ -299,7 +301,7 @@ struct LanguagePicker: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(Capsule().fill(Color.raised(0.08)))
-        .help(tr("Idioma de la interfaz", "Interface language"))
+        .help(tr("Idioma de la interfaz", "Interface language", "表示言語"))
     }
 }
 
@@ -309,14 +311,14 @@ struct ModelPicker: View {
     var body: some View {
         Menu {
             if model.models.isEmpty {
-                Text(model.reachable == false ? tr("Ollama no responde", "Ollama is not reachable")
-                                              : tr("No hay modelos instalados", "No models installed"))
+                Text(model.reachable == false ? tr("Ollama no responde", "Ollama is not reachable", "Ollama に接続できません")
+                                              : tr("No hay modelos instalados", "No models installed", "モデルがインストールされていません"))
             }
             ForEach(model.models, id: \.self) { name in
                 Button {
                     model.selectedModel = name
                 } label: {
-                    let title = model.reasoningModels[name] == false ? name + tr("  (sin Razonar)", "  (no Reason)") : name
+                    let title = model.reasoningModels[name] == false ? name + tr("  (sin Razonar)", "  (no Reason)", "  (推論なし)") : name
                     if name == model.selectedModel {
                         Label(title, systemImage: "checkmark")
                     } else {
@@ -325,7 +327,7 @@ struct ModelPicker: View {
                 }
             }
             Divider()
-            Button(tr("Actualizar lista", "Refresh list")) { Task { await model.refreshStatus() } }
+            Button(tr("Actualizar lista", "Refresh list", "一覧を更新")) { Task { await model.refreshStatus() } }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "cpu")
@@ -338,7 +340,7 @@ struct ModelPicker: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(Capsule().fill(Color.raised(0.08)))
-        .help(tr("Modelo de Ollama", "Ollama model"))
+        .help(tr("Modelo de Ollama", "Ollama model", "Ollama のモデル"))
     }
 }
 
@@ -349,22 +351,22 @@ struct EmptyChatView: View {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
                 .frame(width: 96, height: 96)
-            Text(tr("¿En qué te ayudo?", "How can I help?"))
+            Text(tr("¿En qué te ayudo?", "How can I help?", "何をお手伝いしましょうか?"))
                 .font(.system(size: 24, weight: .semibold))
             Text(tr("Todo corre en esta Mac con Ollama: nada de lo que escribas sale de la computadora.",
-                    "Everything runs on this Mac through Ollama: nothing you write leaves the computer."))
+                    "Everything runs on this Mac through Ollama: nothing you write leaves the computer.", "すべてこの Mac 上で Ollama を通じて動作します。書いた内容がコンピューターの外に出ることはありません。"))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             VStack(alignment: .leading, spacing: 8) {
                 hint("brain", tr("Razonar: más lento (20 a 90 s) y mucho más preciso en cuentas, conteos, lógica y fechas.",
-                                 "Reason: slower (20 to 90 s) and much more accurate on math, counting, logic and dates."))
+                                 "Reason: slower (20 to 90 s) and much more accurate on math, counting, logic and dates.", "推論: 時間はかかります (20～90 秒) が、計算、数え上げ、論理、日付がはるかに正確になります。"))
                 hint("bookmark", tr("/mem <tema> carga una memoria guardada en la conversación.",
-                                    "/mem <topic> loads a saved memory into the conversation."))
+                                    "/mem <topic> loads a saved memory into the conversation.", "/mem <トピック> で、保存したメモリを会話に読み込みます。"))
                 hint("square.and.arrow.down", tr("/save escribe una memoria con lo importante de esta conversación.",
-                                                 "/save writes a memory with what matters from this conversation."))
+                                                 "/save writes a memory with what matters from this conversation.", "/save で、この会話の大事な点をメモリに書き出します。"))
                 hint("doc.text", tr("Arrastra un .txt o .md al cuadro de texto para adjuntarlo.",
-                                    "Drag a .txt or .md file onto the text box to attach it."))
+                                    "Drag a .txt or .md file onto the text box to attach it.", ".txt または .md のファイルを入力欄にドラッグすると添付できます。"))
             }
             .padding(18)
             .frame(maxWidth: 520)
@@ -474,7 +476,7 @@ struct MessageRow: View {
         case .assistant:
             AssistantMessageView(message: message, isStreaming: isStreaming, model: model)
         case .memory:
-            Chip(symbol: "bookmark.fill", text: tr("memoria cargada: ", "memory loaded: ") + (message.memoryFile ?? ""))
+            Chip(symbol: "bookmark.fill", text: tr("memoria cargada: ", "memory loaded: ", "読み込んだメモリ: ") + (message.memoryFile ?? ""))
         case .notice:
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: "info.circle")
@@ -516,8 +518,8 @@ struct AssistantMessageView: View {
             if message.content.isEmpty && isStreaming && message.thinking.isEmpty && !message.reasoned {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text(model.modelIsLoaded ? tr("Pensando la respuesta…", "Working on it…")
-                                             : tr("Cargando el modelo…", "Loading the model…"))
+                    Text(model.modelIsLoaded ? tr("Pensando la respuesta…", "Working on it…", "回答を考えています…")
+                                             : tr("Cargando el modelo…", "Loading the model…", "モデルを読み込んでいます…"))
                         .font(.system(size: 12.5)).foregroundStyle(.secondary)
                 }
             }
@@ -540,13 +542,13 @@ struct AssistantMessageView: View {
                     copied.on = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied.on = false }
                 } label: {
-                    Label(copied.on ? tr("Copiado", "Copied") : tr("Copiar", "Copy"),
+                    Label(copied.on ? tr("Copiado", "Copied", "コピーしました") : tr("Copiar", "Copy", "コピー"),
                           systemImage: copied.on ? "checkmark" : "doc.on.doc")
                 }
                 .buttonStyle(.borderless)
             }
             if message.stopped {
-                Label(tr("Detenido", "Stopped"), systemImage: "stop.circle")
+                Label(tr("Detenido", "Stopped", "停止しました"), systemImage: "stop.circle")
             }
             if let s = message.stats {
                 Text(statsText(s))
@@ -560,7 +562,7 @@ struct AssistantMessageView: View {
         var parts = [s.model]
         if s.tokensPerSecond > 0 { parts.append(String(format: "%.1f tok/s", s.tokensPerSecond)) }
         parts.append(String(format: "%.1f s", s.seconds))
-        if message.reasoned { parts.append(tr("razonado", "reasoned")) }
+        if message.reasoned { parts.append(tr("razonado", "reasoned", "推論あり")) }
         return parts.joined(separator: " · ")
     }
 }
@@ -580,7 +582,7 @@ struct ThinkingBlock: View {
                         .rotationEffect(.degrees(expanded.on ? 90 : 0))
                         .font(.system(size: 10, weight: .semibold))
                     Image(systemName: "brain")
-                    Text(live ? tr("Razonando…", "Reasoning…") : tr("Razonamiento", "Reasoning"))
+                    Text(live ? tr("Razonando…", "Reasoning…", "推論中…") : tr("Razonamiento", "Reasoning", "推論の過程"))
                     if live { ProgressView().controlSize(.mini) }
                 }
                 .font(.system(size: 12, weight: .medium))
@@ -629,7 +631,7 @@ struct ComposerView: View {
                     HStack(spacing: 6) {
                         ForEach(Array(model.attachments.enumerated()), id: \.offset) { i, a in
                             HStack(spacing: 4) {
-                                Chip(symbol: "doc.text", text: "\(a.name) · \(a.text.count) " + tr("caracteres", "chars"))
+                                Chip(symbol: "doc.text", text: "\(a.name) · \(a.text.count) " + tr("caracteres", "chars", "文字"))
                                 Button { model.attachments.remove(at: i) } label: {
                                     Image(systemName: "xmark.circle.fill")
                                 }
@@ -640,7 +642,7 @@ struct ComposerView: View {
                     }
                 }
                 ComposerTextView(text: $model.composer, height: $layout.height,
-                                 placeholder: tr("Escribe un mensaje…  (/mem tema · /save)", "Message…  (/mem topic · /save)"),
+                                 placeholder: tr("Escribe un mensaje…  (/mem tema · /save)", "Message…  (/mem topic · /save)", "メッセージを入力…  (/mem トピック · /save)"),
                                  onSubmit: { model.send() },
                                  onDropFile: { model.attachFile($0) })
                     .frame(height: layout.height)
@@ -649,7 +651,7 @@ struct ComposerView: View {
                     // A plain button: the system toggle style looks the same on and off in dark mode.
                     let reasonOn = model.reason && model.canReason
                     Button { model.reason.toggle() } label: {
-                        Label(tr("Razonar", "Reason"), systemImage: reasonOn ? "brain.fill" : "brain")
+                        Label(tr("Razonar", "Reason", "推論"), systemImage: reasonOn ? "brain.fill" : "brain")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(reasonOn ? Color.onTheme : Color.secondary)
                             .padding(.horizontal, 10)
@@ -663,13 +665,13 @@ struct ComposerView: View {
                     .accessibilityAddTraits(reasonOn ? .isSelected : [])
                     .help(model.canReason
                           ? tr("Más lento (unos 20 a 90 s) pero mucho más preciso en cuentas, conteos, lógica y fechas.",
-                               "Slower (about 20 to 90 s) but much more accurate on math, counting, logic and dates.")
+                               "Slower (about 20 to 90 s) but much more accurate on math, counting, logic and dates.", "時間はかかります (約 20～90 秒) が、計算、数え上げ、論理、日付がはるかに正確になります。")
                           : tr("\(model.selectedModel) no puede razonar: elige otro modelo para usar Razonar.",
-                               "\(model.selectedModel) cannot reason: choose another model to use Reason."))
+                               "\(model.selectedModel) cannot reason: choose another model to use Reason.", "\(model.selectedModel) は推論できません。推論を使うには別のモデルを選んでください。"))
 
                     if reasonOn {
                         Text(tr("Más lento (20 a 90 s), mucho más preciso en cuentas, conteos, lógica y fechas.",
-                                "Slower (20-90 s), much more accurate on math, counting, logic and dates."))
+                                "Slower (20-90 s), much more accurate on math, counting, logic and dates.", "時間はかかります (20～90 秒) が、計算、数え上げ、論理、日付がはるかに正確になります。"))
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -685,7 +687,7 @@ struct ComposerView: View {
                                 .foregroundStyle(Color(nsColor: .windowBackgroundColor))
                         }
                         .buttonStyle(.plain)
-                        .help(tr("Detener", "Stop"))
+                        .helpAndLabel(tr("Detener", "Stop", "停止"))
                         .keyboardShortcut(".", modifiers: .command)
                     } else {
                         Button(action: model.send) {
@@ -697,7 +699,7 @@ struct ComposerView: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(!model.canSend)
-                        .help(tr("Enviar (Enter) · Nueva línea (Shift+Enter)", "Send (Enter) · New line (Shift+Enter)"))
+                        .helpAndLabel(tr("Enviar (Enter) · Nueva línea (Shift+Enter)", "Send (Enter) · New line (Shift+Enter)", "送信 (Enter) · 改行 (Shift+Enter)"))
                     }
                 }
             }
@@ -743,30 +745,30 @@ struct StatusLine: View {
     }
 
     private var text: String {
-        guard let ok = model.reachable else { return tr("Buscando Ollama…", "Looking for Ollama…") }
+        guard let ok = model.reachable else { return tr("Buscando Ollama…", "Looking for Ollama…", "Ollama を探しています…") }
         let remote = Connection.remoteHost
         if !ok {
             if remote != nil { return model.connectionError ?? OllamaError.unreachable.localizedDescription }
             return tr("Ollama no responde en 127.0.0.1:11434. Solución: brew services start ollama",
-                      "Ollama is not reachable at 127.0.0.1:11434. Fix: brew services start ollama")
+                      "Ollama is not reachable at 127.0.0.1:11434. Fix: brew services start ollama", "127.0.0.1:11434 の Ollama に接続できません。対処: brew services start ollama")
         }
         let n = model.models.count
-        let place = remote.map { tr("Ollama en \($0) (SSH)", "Ollama on \($0) (SSH)") } ?? tr("Ollama conectado", "Ollama connected")
-        var parts = [place + " · \(n) " + (n == 1 ? tr("modelo", "model") : tr("modelos", "models"))]
+        let place = remote.map { tr("Ollama en \($0) (SSH)", "Ollama on \($0) (SSH)", "\($0) の Ollama (SSH)") } ?? tr("Ollama conectado", "Ollama connected", "Ollama に接続済み")
+        var parts = [place + " · \(n) " + (n == 1 ? tr("modelo", "model", "個のモデル") : tr("modelos", "models", "個のモデル"))]
         if model.isDraftingMemory {
-            parts.append(tr("Escribiendo la memoria…", "Writing the memory…"))
+            parts.append(tr("Escribiendo la memoria…", "Writing the memory…", "メモリを書いています…"))
         } else if model.isGenerating {
             if !model.receivedFirstToken {
-                parts.append(model.modelIsLoaded ? tr("\(model.selectedModel) cargado", "\(model.selectedModel) loaded")
-                                                 : tr("cargando \(model.selectedModel)…", "loading \(model.selectedModel)…"))
+                parts.append(model.modelIsLoaded ? tr("\(model.selectedModel) cargado", "\(model.selectedModel) loaded", "\(model.selectedModel) 読み込み済み")
+                                                 : tr("cargando \(model.selectedModel)…", "loading \(model.selectedModel)…", "\(model.selectedModel) を読み込んでいます…"))
             } else {
-                parts.append(model.receivingThinking ? tr("razonando…", "reasoning…") : tr("escribiendo…", "writing…"))
+                parts.append(model.receivingThinking ? tr("razonando…", "reasoning…", "推論中…") : tr("escribiendo…", "writing…", "回答中…"))
             }
             parts.append(String(format: "%.1f s", model.elapsed))
         } else {
-            parts.append(model.modelIsLoaded ? tr("\(model.selectedModel) cargado", "\(model.selectedModel) loaded")
+            parts.append(model.modelIsLoaded ? tr("\(model.selectedModel) cargado", "\(model.selectedModel) loaded", "\(model.selectedModel) 読み込み済み")
                                              : tr("\(model.selectedModel) se carga con el primer mensaje",
-                                                  "\(model.selectedModel) loads with the first message"))
+                                                  "\(model.selectedModel) loads with the first message", "\(model.selectedModel) は最初のメッセージで読み込まれます"))
             if let s = model.lastStats {
                 if s.tokensPerSecond > 0 { parts.append(String(format: "%.1f tok/s", s.tokensPerSecond)) }
                 parts.append(String(format: "%.1f s", s.seconds))
@@ -793,18 +795,18 @@ struct MemoryPreviewSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(tr("Guardar memoria", "Save memory"))
+            Text(tr("Guardar memoria", "Save memory", "メモリを保存"))
                 .font(.system(size: 17, weight: .semibold))
-            Text(MemoryStore.folder.path.tildePath)
+            Text(Paths.shown(MemoryStore.folder.path))
                 .font(.system(size: 11)).foregroundStyle(.secondary).textSelection(.enabled)
 
             Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
                 GridRow {
-                    Text(tr("Archivo", "File")).foregroundStyle(.secondary)
+                    Text(tr("Archivo", "File", "ファイル")).foregroundStyle(.secondary)
                     TextField("", text: $editor.file).textFieldStyle(.roundedBorder)
                 }
                 GridRow {
-                    Text(tr("Índice", "Index")).foregroundStyle(.secondary)
+                    Text(tr("Índice", "Index", "インデックス")).foregroundStyle(.secondary)
                     TextField("", text: $editor.indexLine).textFieldStyle(.roundedBorder)
                 }
             }
@@ -812,7 +814,7 @@ struct MemoryPreviewSheet: View {
 
             if MemoryStore.exists(MemoryStore.sanitizeFileName(editor.file)) {
                 Label(tr("Ya existe \(MemoryStore.sanitizeFileName(editor.file)): se va a reemplazar.",
-                         "\(MemoryStore.sanitizeFileName(editor.file)) already exists: it will be replaced."),
+                         "\(MemoryStore.sanitizeFileName(editor.file)) already exists: it will be replaced.", "\(MemoryStore.sanitizeFileName(editor.file)) はすでに存在します。置き換えられます。"),
                       systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .font(.system(size: 12.5, weight: .medium))
@@ -825,12 +827,12 @@ struct MemoryPreviewSheet: View {
                 .background(RoundedRectangle(cornerRadius: 8).fill(Color.sunken(0.3)))
 
             HStack {
-                Text("\(editor.content.components(separatedBy: "\n").count) " + tr("líneas", "lines"))
+                Text("\(editor.content.components(separatedBy: "\n").count) " + tr("líneas", "lines", "行"))
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                 Spacer()
-                Button(tr("Cancelar", "Cancel")) { model.memoryDraft = nil }
+                Button(tr("Cancelar", "Cancel", "キャンセル")) { model.memoryDraft = nil }
                     .keyboardShortcut(.cancelAction)
-                Button(tr("Guardar", "Save")) { model.confirmMemory(editor.draft) }
+                Button(tr("Guardar", "Save", "保存")) { model.confirmMemory(editor.draft) }
                     .keyboardShortcut(.defaultAction)
             }
         }

@@ -43,27 +43,37 @@ enum OllamaError: LocalizedError {
     case remote(String)
     case server(String)
     case badResponse
+    case unreadable
 
     var errorDescription: String? {
         switch self {
         case .unreachable:
             if let host = Connection.remoteHost {
-                return tr("Ollama no responde en \(host) (por SSH).", "Ollama is not reachable on \(host) (through SSH).")
+                return tr("Ollama no responde en \(host) (por SSH).", "Ollama is not reachable on \(host) (through SSH).", "\(host) の Ollama に接続できません (SSH 経由)。")
             }
             return tr("No se puede conectar con Ollama. Prueba: brew services start ollama",
-                      "Cannot reach Ollama. Try: brew services start ollama")
+                      "Cannot reach Ollama. Try: brew services start ollama", "Ollama に接続できません。次を試してください: brew services start ollama")
         case .remote(let s):
             return s
         case .server(let s):
             return "Ollama: \(s)"
+        case .unreadable:
+            return tr("Ollama devolvió una respuesta que no se entiende.", "Ollama returned an answer that cannot be read.",
+                      "Ollama から読み取れない応答が返されました。")
         case .badResponse:
-            return tr("Respuesta inesperada de Ollama.", "Unexpected response from Ollama.")
+            return tr("Respuesta inesperada de Ollama.", "Unexpected response from Ollama.", "Ollama から予期しない応答がありました。")
         }
     }
 }
 
 /// Minimal client for the local Ollama HTTP API.
 struct OllamaClient {
+    /// Reads Ollama's JSON; an answer that is not what Ollama sends (another program on its port, say)
+    /// becomes a plain message instead of a technical one.
+    static func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        do { return try JSONDecoder().decode(type, from: data) } catch { throw OllamaError.unreadable }
+    }
+
     /// Base address on this Mac or through the SSH tunnel (see Connection).
     private func url(_ path: String) async throws -> URL {
         try await Connection.shared.base().appendingPathComponent(path)
@@ -80,7 +90,7 @@ struct OllamaClient {
         req.timeoutInterval = 4
         let data: Data
         do { (data, _) = try await URLSession.shared.data(for: req) } catch { throw OllamaError.unreachable }
-        let decoded = try JSONDecoder().decode(TagsResponse.self, from: data)
+        let decoded = try OllamaClient.decode(TagsResponse.self, from: data)
         return decoded.models.map(\.name).sorted()
     }
 
@@ -93,7 +103,7 @@ struct OllamaClient {
         req.timeoutInterval = 4
         let data: Data
         do { (data, _) = try await URLSession.shared.data(for: req) } catch { throw OllamaError.unreachable }
-        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
         return object?["capabilities"] as? [String] ?? []
     }
 
@@ -103,7 +113,7 @@ struct OllamaClient {
         req.timeoutInterval = 4
         let data: Data
         do { (data, _) = try await URLSession.shared.data(for: req) } catch { throw OllamaError.unreachable }
-        let decoded = try JSONDecoder().decode(TagsResponse.self, from: data)
+        let decoded = try OllamaClient.decode(TagsResponse.self, from: data)
         return decoded.models.map(\.name)
     }
 
@@ -173,7 +183,7 @@ struct OllamaClient {
             if Task.isCancelled { throw CancellationError() }
             throw OllamaError.unreachable
         }
-        let chunk = try JSONDecoder().decode(ChatChunk.self, from: data)
+        let chunk = try OllamaClient.decode(ChatChunk.self, from: data)
         if let err = chunk.error { throw OllamaError.server(err) }
         guard let text = chunk.message?.content else { throw OllamaError.badResponse }
         return text

@@ -85,8 +85,8 @@ enum ConversationSearch {
                 let end = m.content.index(after: map[at + q.count - 1])
                 hits.append(fragment(c, m, start ..< end))
                 inThis += 1
+                if hits.count >= max { return hits }   // before the per-conversation cut, or one more could slip in
                 if inThis >= perConversation { break }
-                if hits.count >= max { return hits }
             }
         }
         return hits
@@ -115,8 +115,8 @@ enum ConversationSearch {
 /// A conversation as a Markdown file: title, date, model, and each turn under its own heading.
 enum MarkdownExport {
     /// The Markdown text, with "\n" line endings and a final line break.
-    static func render(_ c: Conversation, spanish es: Bool, zone: TimeZone = .current, version: String = AppInfo.version) -> String {
-        func T(_ s: String, _ e: String) -> String { es ? s : e }
+    static func render(_ c: Conversation, language: String, zone: TimeZone = .current, version: String = AppInfo.version) -> String {
+        func T(_ s: String, _ e: String, _ j: String) -> String { language == "es" ? s : language == "ja" ? j : e }
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = zone
@@ -124,31 +124,31 @@ enum MarkdownExport {
         var md = ""
         func line(_ s: String = "") { md += s + "\n" }
 
-        let title = c.title.isEmpty ? T("Conversación nueva", "New conversation") : c.title
+        let title = c.title.isEmpty ? T("Conversación nueva", "New conversation", "新しい会話") : c.title
         line("# " + title.replacingOccurrences(of: "\n", with: " ").trimmed)
         line()
         var models: [String] = []
         for m in c.messages where m.role == .assistant {
             if let s = m.stats?.model, !s.isEmpty, !models.contains(s) { models.append(s) }
         }
-        line("- \(T("Fecha", "Date")): \(f.string(from: c.created))")
-        if c.updated.timeIntervalSince(c.created) >= 60 { line("- \(T("Última actividad", "Last activity")): \(f.string(from: c.updated))") }
-        line("- \(models.count > 1 ? T("Modelos", "Models") : T("Modelo", "Model")): \(models.isEmpty ? "-" : models.joined(separator: ", "))")
-        line("- \(T("Exportada con", "Exported with")) Citadel \(version)")
+        line("- \(T("Fecha", "Date", "日付")): \(f.string(from: c.created))")
+        if c.updated.timeIntervalSince(c.created) >= 60 { line("- \(T("Última actividad", "Last activity", "最終更新")): \(f.string(from: c.updated))") }
+        line("- \(models.count > 1 ? T("Modelos", "Models", "モデル") : T("Modelo", "Model", "モデル")): \(models.isEmpty ? "-" : models.joined(separator: ", "))")
+        line("- \(T("Exportada con", "Exported with", "エクスポート元:")) Citadel \(version)")
 
         for m in c.messages {
             switch m.role {
             case .user:
-                line(); line("## " + T("Usuario", "User")); line()
+                line(); line("## " + T("Usuario", "User", "ユーザー")); line()
                 if !m.content.isEmpty { line(normalize(m.content)) }
                 for (i, a) in m.attachments.enumerated() {
                     if !m.content.isEmpty || i > 0 { line() }
-                    md += details(T("Adjunto: ", "Attachment: ") + a.name, a.text)
+                    md += details(T("Adjunto: ", "Attachment: ", "添付ファイル: ") + a.name, a.text)
                 }
             case .assistant:
-                line(); line("## " + T("Asistente", "Assistant")); line()
+                line(); line("## " + T("Asistente", "Assistant", "アシスタント")); line()
                 if !m.thinking.trimmed.isEmpty {
-                    md += details(T("Razonamiento", "Reasoning"), m.thinking)
+                    md += details(T("Razonamiento", "Reasoning", "推論の過程"), m.thinking)
                     line()
                 }
                 if !m.content.isEmpty { line(closeFences(normalize(m.content))) }
@@ -158,14 +158,14 @@ enum MarkdownExport {
                     if s.tokensPerSecond > 0 { notes.append(String(format: "%.1f tok/s", s.tokensPerSecond)) }
                     if s.seconds > 0 { notes.append(String(format: "%.1f s", s.seconds)) }
                 }
-                if m.stopped { notes.append(T("detenida", "stopped")) }
+                if m.stopped { notes.append(T("detenida", "stopped", "停止")) }
                 if !notes.isEmpty {
                     if !m.content.isEmpty { line() }
                     line("_" + notes.joined(separator: " · ") + "_")
                 }
             case .memory:
                 line()
-                line("> \(T("Memoria cargada", "Memory loaded")): `\(m.memoryFile ?? "memory.md")`")
+                line("> \(T("Memoria cargada", "Memory loaded", "読み込んだメモリ")): `\(m.memoryFile ?? "memory.md")`")
             case .notice:
                 break
             }
@@ -222,17 +222,17 @@ enum MarkdownExport {
     @MainActor
     static func export(_ c: Conversation) {
         let panel = NSSavePanel()
-        panel.title = tr("Exportar a Markdown", "Export to Markdown")
+        panel.title = tr("Exportar a Markdown", "Export to Markdown", "Markdown にエクスポート")
         panel.nameFieldStringValue = fileName(c)
         panel.allowedContentTypes = [.init(filenameExtension: "md") ?? .plainText]
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            try Data(render(c, spanish: L10n.shared.isSpanish).utf8).write(to: url, options: .atomic)
+            try Data(render(c, language: L10n.shared.language).utf8).write(to: url, options: .atomic)
             if UserDefaults.standard.bool(forKey: openAfterKey) { NSWorkspace.shared.open(url) }
-            ChatModel.shared.toast = tr("Exportada: \(url.lastPathComponent)", "Exported: \(url.lastPathComponent)")
+            ChatModel.shared.toast = tr("Exportada: \(url.lastPathComponent)", "Exported: \(url.lastPathComponent)", "書き出しました: \(url.lastPathComponent)")
         } catch {
-            ChatModel.shared.toast = tr("No se pudo exportar: \(error.localizedDescription)", "Could not export: \(error.localizedDescription)")
+            ChatModel.shared.toast = tr("No se pudo exportar: \(error.localizedDescription)", "Could not export: \(error.localizedDescription)", "書き出せませんでした: \(error.localizedDescription)")
         }
     }
 }

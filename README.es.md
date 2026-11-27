@@ -1,8 +1,8 @@
 # Citadel
 
-Gabriel Castiglia · 27 de noviembre de 2026 · versión 1.3.2 · licencia GPL-2.0
+Gabriel Castiglia · 27 de noviembre de 2026 · versión 1.4.0 · licencia GPL-2.0
 
-[English](README.md) · Español
+[English](README.md) · Español · [日本語](README.ja.md)
 
 Repositorio: <https://github.com/Gabriel-Castiglia/citadel>
 
@@ -12,7 +12,7 @@ Citadel es una app de chat para macOS que conversa con modelos de lenguaje que c
 mediante [Ollama](https://ollama.com). Nada de lo que escribes sale de la computadora: la app solo se
 conecta con Ollama en `127.0.0.1:11434`, salvo que elijas usar el Ollama de otra computadora tuya por
 SSH (ver [Ollama en otra computadora](#ollama-en-otra-computadora)). Está escrita en Swift y SwiftUI, se compila solo con las
-Command Line Tools de Apple (sin Xcode) y su interfaz está en inglés y en español. La versión para
+Command Line Tools de Apple (sin Xcode) y su interfaz está en inglés, español y japonés. La versión para
 Windows, con las mismas funciones, tiene su propio repositorio:
 <https://github.com/Gabriel-Castiglia/citadel-windows>.
 
@@ -53,7 +53,7 @@ En una Mac con 16 GB de memoria, este modelo ocupa unos 7 GB mientras está carg
 
 Descarga `Citadel-<versión>.pkg` de la
 [página de versiones](https://github.com/Gabriel-Castiglia/citadel/releases) y ábrelo. El instalador
-está en inglés o en castellano, según el idioma de la Mac; muestra una página de bienvenida y la
+está en inglés, castellano o japonés, según el idioma de la Mac; muestra una página de bienvenida y la
 licencia, e instala `Citadel.app` en `/Applications`, cerrando antes una copia abierta. Instalar un
 paquete más nuevo sobre uno anterior actualiza Citadel; las conversaciones, las reglas, las memorias y
 los ajustes se conservan.
@@ -65,7 +65,7 @@ cada paquete descargado; la app instalada abre sin avisos. El archivo `SHA256SUM
 permite comprobar antes la descarga:
 
 ```
-shasum -a 256 Citadel-1.3.2.pkg
+shasum -a 256 Citadel-1.4.0.pkg
 ```
 
 ### Desde el código
@@ -116,16 +116,19 @@ velocidad en tokens por segundo y los segundos que tardó.
 
 La barra lateral lista las conversaciones, de la más nueva a la más vieja. ⌘N o el botón del lápiz
 empiezan una nueva, cuyo título es la primera línea del primer mensaje. Con clic derecho sobre una
-conversación se la renombra o se la elimina; eliminar pide confirmación y borra su archivo del disco. El
+conversación se la renombra o se la elimina; eliminar pide confirmación y borra su archivo del disco. Eliminar
+la conversación que está respondiendo también detiene la respuesta. El
 campo de búsqueda (⌘F) filtra por título y también busca en el texto de todas las conversaciones
 guardadas, sin distinguir mayúsculas, tildes ni saltos de línea: bajo *En los mensajes* cada coincidencia
 muestra la conversación, la fecha y las palabras de alrededor, resaltadas, y un clic abre la conversación
-en ese mensaje, que parpadea una vez.
+en ese mensaje, que parpadea una vez. Se muestran hasta 200 resultados. Las fechas de la lista van en el formato
+del idioma de la interfaz.
 
 El botón de compartir del encabezado, o el menú de una conversación en la barra lateral, la exporta a
 Markdown: título, fecha, modelo y cada turno bajo su propio encabezado, con los bloques de código
 intactos y los adjuntos y el razonamiento plegados en `<details>`. Con *Abrir después de exportar*
-encendido, el archivo se abre en la app que macOS usa para los `.md`.
+encendido, el archivo se abre en la app que macOS usa para los `.md`. Los rótulos del archivo (Fecha, Modelo…)
+van en el idioma de la interfaz.
 
 ### Actualizaciones
 
@@ -136,7 +139,8 @@ abrirlo), comprueba que la app que trae tenga el mismo identificador, la versió
 firma, espera o detiene la respuesta en curso según elijas, y se cierra; la app nueva ocupa el lugar de
 la vieja y se abre con el texto que estabas escribiendo y la conversación abierta. Una copia que no es
 `/Applications/Citadel.app` recibe la página de descarga; una instalada por otro usuario abre el paquete
-ya comprobado en el Instalador.
+ya comprobado en el Instalador. Si se pide otra vez mientras ya se están buscando actualizaciones, Citadel lo
+avisa.
 
 ### Modelos
 
@@ -164,7 +168,8 @@ como en [Requisitos](#requisitos), y elígela en el menú. Una ventana mayor ocu
 La línea bajo el cuadro de texto dice si Ollama responde y dónde (en esta Mac, o en otra computadora
 por SSH), si el modelo está cargado o se cargará con el próximo mensaje, qué está haciendo (cargando,
 razonando, escribiendo) con los segundos transcurridos, y la velocidad de la última respuesta. Cuando
-Ollama no responde, esa misma línea da el arreglo: `brew services start ollama`, o el error de SSH.
+Ollama no responde, esa misma línea da el arreglo: `brew services start ollama`, o el error de SSH. Una
+respuesta que no se entiende (de otro programa en el puerto de Ollama, por ejemplo) se avisa con palabras simples.
 
 ### Razonar
 
@@ -186,7 +191,10 @@ conexión y Ollama deja de generar; lo escrito hasta ese momento queda, marcado 
 ### Adjuntos
 
 Arrastra un archivo `.txt` o `.md` al cuadro de texto para adjuntar su texto al próximo mensaje; una
-etiqueta muestra el nombre del archivo y su largo, con un botón para quitarlo.
+etiqueta muestra el nombre del archivo y su largo, con un botón para quitarlo. Cada archivo puede pesar hasta
+2 MB; uno más grande no se adjunta y se avisa. El texto se lee en su propia codificación (marca de orden de bytes,
+UTF-8, o la que macOS reconoce, como Shift_JIS o Windows-1252), así que un archivo que no es UTF-8 no muestra
+caracteres rotos.
 
 ### Memorias
 
@@ -217,15 +225,16 @@ sin guardar nada; por eso el modelo solo redacta el texto, y la app escribe el a
 
 ### Ajustes
 
-Citadel → Ajustes… (⌘,) tiene tres pestañas.
+Citadel → Ajustes… (⌘,) tiene cuatro pestañas.
 
 ![Ajustes, pestaña Memorias](docs/images/settings-es.png)
 
 | Pestaña | Qué contiene |
 |---|---|
 | Memorias | La carpeta de memorias (Elegir…, o Por defecto para volver a `~/Library/Application Support/Citadel/memories`), la lista de memorias con su línea del índice, Abrir carpeta, Mostrar en Finder para cada memoria, y Eliminar, que pide confirmación y borra el archivo y su línea del índice. |
-| Reglas | Las reglas que van al principio de cada pedido, editables. Guardar (⌘S) las escribe; Descartar cambios deshace lo editado; Restaurar las originales vuelve a las reglas de fábrica. |
+| Reglas | Las reglas que van al principio de cada pedido, editables. Guardar (⌘S) las escribe; Descartar cambios deshace lo editado; Restaurar las originales vuelve a las reglas de fábrica. Cambiar el idioma con Ajustes abierto no pierde lo editado sin guardar. |
 | Ollama | Dónde corre Ollama: en esta Mac, o en otra computadora por SSH (ver [Ollama en otra computadora](#ollama-en-otra-computadora)). Aplicar y probar se conecta enseguida y lista los modelos que encuentra. |
+| Apariencia | El aspecto de la ventana y los doce colores (ver [Tema y color](#tema-y-color)). |
 
 Cualquier carpeta puede ser la carpeta de memorias, también una que use otra herramienta, mientras
 mantenga el mismo formato de `_index.md`.
@@ -254,9 +263,10 @@ en la nube, cosa que no puede saber.
 
 ### Idioma
 
-La interfaz arranca en inglés. El botón del globo, arriba a la derecha junto al menú de modelos,
-muestra el idioma actual y cambia entre English y Español; el menú Idioma de la barra de menús
-(Language, en inglés) hace lo mismo. El cambio se aplica al instante y se recuerda. Los menús que
+La primera vez, la interfaz arranca en el idioma de la Mac si es español o japonés, y si no en inglés. El
+botón del globo, arriba a la derecha junto al menú de modelos, muestra el idioma actual y cambia entre
+English, Español y 日本語; el menú Idioma de la barra de menús (Language en inglés, 言語 en japonés) hace lo
+mismo. El cambio se aplica al instante y se recuerda. Los menús que
 macOS agrega a toda app (Edición, Visualización, Ventana, Ayuda) siguen el mismo idioma desde el
 próximo arranque, porque macOS lo lee cuando la app se abre. El idioma de la interfaz no cambia el de
 las respuestas: el modelo contesta en el idioma en que le escribes.
@@ -303,7 +313,7 @@ cliente SSH. Si la conexión se corta, Citadel la vuelve a abrir con el pedido s
 
 ![Acerca de Citadel](docs/images/about-es.png)
 
-### Teclado
+### Teclado y VoiceOver
 
 | Teclas | Acción |
 |---|---|
@@ -314,6 +324,9 @@ cliente SSH. Si la conexión se corta, Citadel la vuelve a abrir con el pedido s
 | ⌘. | Detener la respuesta |
 | ⌘, | Ajustes |
 | ⌘S | Guardar las reglas (pestaña Reglas) |
+
+Los botones que muestran solo un ícono (conversación nueva, exportar, enviar, detener, Mostrar en Finder y Eliminar de
+cada memoria, actualizar) tienen un nombre que VoiceOver lee.
 
 ## Archivos
 
@@ -326,7 +339,8 @@ cliente SSH. Si la conexión se corta, Citadel la vuelve a abrir con el pedido s
 | Ajustes (idioma, modelo, Razonar, carpeta de memorias, destino SSH, tamaño de la ventana) | dominio de preferencias `io.github.gabriel-castiglia.citadel` |
 | Llavero de firma | `~/Library/Keychains/citadel-signing.keychain-db` |
 
-Los archivos se escriben en UTF-8 sin marca de orden de bytes. Las conversaciones son JSON simple y se
+Los archivos se escriben en UTF-8 sin marca de orden de bytes, enteros antes de reemplazar al anterior, así que
+un corte de luz no puede dejar un archivo vacío. Las conversaciones son JSON simple y se
 pueden leer, copiar o borrar con Citadel cerrada.
 
 ## Firma
@@ -352,7 +366,7 @@ se usa.
 | `scripts/firma.sh` | Firma `build/Citadel.app` (ver [Firma](#firma)). |
 | `scripts/instalar.sh` | Corre los dos anteriores e instala en `/Applications`. |
 | `scripts/paquete.sh` | Corre los dos primeros y arma el paquete de instalación `build/Citadel-<versión>.pkg` a partir de `instalador/`. |
-| `scripts/manual.sh` | Genera los manuales en PDF de `docs/` a partir de `README.md` y `README.es.md`. |
+| `scripts/manual.sh` | Genera los manuales en PDF de `docs/` a partir de `README.md`, `README.es.md` y `README.ja.md`. |
 | `icono/render.sh` | Convierte `icono/icono.svg` en `icono/icono-1024.png` con Chrome sin ventana. |
 
 La app tiene dos modos para mantenimiento. Los dos aceptan `--data-folder <carpeta>` para usar otra
@@ -364,14 +378,14 @@ carpeta en lugar de `~/Library/Application Support/Citadel`, así nunca tocan la
   orden de bytes) y `/mem`. Se niega a correr sobre una carpeta de memorias en uso.
 - `Citadel --screenshot <archivo.png>` guarda una imagen de la ventana principal y se cierra; con
   `--screenshot-view about`, `settings` o `save` retrata esa ventana (`save` le pide al modelo un
-  borrador real de la conversación elegida). Agregando `-language es` muestra la interfaz en español.
+  borrador real de la conversación elegida). Agregando `-language es` o `-language ja` muestra la interfaz en ese idioma.
   Las imágenes de `docs/images` se hicieron así.
 
 | Carpeta | Contenido |
 |---|---|
 | `Sources` | La app: vistas de SwiftUI, cliente de Ollama, conversaciones, memorias, ajustes y autoprueba. |
 | `scripts` | Compilación, firma, instalación, paquete y manuales. |
-| `instalador` | La definición del paquete: `Distribution.xml`, el script que cierra una copia abierta, y las páginas de bienvenida y de cierre en inglés y en castellano. |
+| `instalador` | La definición del paquete: `Distribution.xml`, el script que cierra una copia abierta, y las páginas de bienvenida y de cierre en inglés, castellano y japonés. |
 | `icono` | El ícono, en SVG y en PNG de 1024 píxeles. |
 | `docs` | Manuales en PDF, imágenes y la hoja de estilo del manual. |
 
@@ -385,7 +399,8 @@ carpeta en lugar de `~/Library/Application Support/Citadel`, así nunca tocan la
 - Las respuestas llegan de `/api/chat` como un objeto JSON por línea. Detener cancela la tarea que las
   lee, lo que cierra la conexión; Ollama entonces cancela la generación, como muestra su registro
   (`srv stop: cancel task`). También se atienden los modelos que escriben su razonamiento entre
-  etiquetas `<think>` en lugar de usar el campo `thinking`.
+  etiquetas `<think>` en lugar de usar el campo `thinking`, aunque la etiqueta llegue partida entre dos
+  pedazos de la respuesta.
 - En 15 preguntas difíciles de conteo, cuentas, lógica y fechas, hechas dos veces cada una, Qwen3 8B
   acertó 9 de 30 sin razonar y 26 de 30 razonando. Razonando, la respuesta mediana tardó 38 segundos y
   la más lenta 172. A veces el modelo entra en un bucle de razonamiento hasta llegar al tope de 8.000
@@ -401,7 +416,8 @@ carpeta en lugar de `~/Library/Application Support/Citadel`, así nunca tocan la
   `"think": false`, esté como esté el botón Razonar.
 - El túnel SSH corre `ssh -N` con `BatchMode=yes`, `ExitOnForwardFailure=yes` y señales de vida cada
   15 segundos; Citadel espera a que el extremo local acepte conexiones antes de enviar. Si Citadel se
-  cierra a la fuerza en vez de salir, el arranque siguiente termina el túnel que quedó.
+  cierra a la fuerza en vez de salir, el arranque siguiente termina el túnel que quedó. Con Ollama o la
+  computadora de SSH sin responder, los chequeos de estado no se amontonan.
 
 ## Créditos
 

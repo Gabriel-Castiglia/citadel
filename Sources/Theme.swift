@@ -16,10 +16,10 @@ import AppKit
 import SwiftUI
 
 struct Accent {
-    let key, es, en: String
+    let key, es, en, ja: String
     let light, dark: UInt32          // the deeper tone for light windows, the brighter one for dark
 
-    var name: String { tr(es, en) }
+    var name: String { tr(es, en, ja) }
 
     /// A colour that is the light or the dark tone, following the window's appearance.
     var color: Color { Color(nsColor: nsColor) }
@@ -46,18 +46,18 @@ struct Accent {
     }
 
     static let all: [Accent] = [
-        Accent(key: "green", es: "Verde", en: "Green", light: 0x2A9D57, dark: 0x3CCF75),   // the original
-        Accent(key: "gold", es: "Dorado", en: "Gold", light: 0x9A6F00, dark: 0xE2B84C),
-        Accent(key: "purple", es: "Morado", en: "Purple", light: 0x5B2A86, dark: 0xB392E0),
-        Accent(key: "sky", es: "Celeste", en: "Sky blue", light: 0x1A8CD8, dark: 0x5CB8F0),
-        Accent(key: "ember", es: "Naranja", en: "Orange", light: 0xD9652F, dark: 0xF08A5D),
-        Accent(key: "red", es: "Rojo", en: "Red", light: 0xC8102E, dark: 0xF2545B),
-        Accent(key: "yellow", es: "Amarillo", en: "Yellow", light: 0xB88A00, dark: 0xF5C842),
-        Accent(key: "teal", es: "Verde azulado", en: "Teal", light: 0x00796B, dark: 0x4DB6AC),
-        Accent(key: "blue", es: "Azul", en: "Blue", light: 0x1F5FD1, dark: 0x6E9BFF),
-        Accent(key: "pink", es: "Rosa", en: "Pink", light: 0xC2185B, dark: 0xF06292),
-        Accent(key: "black", es: "Negro", en: "Black", light: 0x1D1D1F, dark: 0xC7C7CC),
-        Accent(key: "white", es: "Blanco", en: "White", light: 0x8E8E93, dark: 0xF5F5F7),
+        Accent(key: "green", es: "Verde", en: "Green", ja: "グリーン", light: 0x2A9D57, dark: 0x3CCF75),   // the original
+        Accent(key: "gold", es: "Dorado", en: "Gold", ja: "ゴールド", light: 0x9A6F00, dark: 0xE2B84C),
+        Accent(key: "purple", es: "Morado", en: "Purple", ja: "パープル", light: 0x5B2A86, dark: 0xB392E0),
+        Accent(key: "sky", es: "Celeste", en: "Sky blue", ja: "スカイ ブルー", light: 0x1A8CD8, dark: 0x5CB8F0),
+        Accent(key: "ember", es: "Naranja", en: "Orange", ja: "オレンジ", light: 0xD9652F, dark: 0xF08A5D),
+        Accent(key: "red", es: "Rojo", en: "Red", ja: "レッド", light: 0xC8102E, dark: 0xF2545B),
+        Accent(key: "yellow", es: "Amarillo", en: "Yellow", ja: "イエロー", light: 0xB88A00, dark: 0xF5C842),
+        Accent(key: "teal", es: "Verde azulado", en: "Teal", ja: "ティール", light: 0x00796B, dark: 0x4DB6AC),
+        Accent(key: "blue", es: "Azul", en: "Blue", ja: "ブルー", light: 0x1F5FD1, dark: 0x6E9BFF),
+        Accent(key: "pink", es: "Rosa", en: "Pink", ja: "ピンク", light: 0xC2185B, dark: 0xF06292),
+        Accent(key: "black", es: "Negro", en: "Black", ja: "ブラック", light: 0x1D1D1F, dark: 0xC7C7CC),
+        Accent(key: "white", es: "Blanco", en: "White", ja: "ホワイト", light: 0x8E8E93, dark: 0xF5F5F7),
     ]
 
     static func get(_ key: String) -> Accent { all.first { $0.key == key } ?? all[0] }
@@ -120,18 +120,20 @@ extension Color {
 }
 
 struct ThemeSettings: View {
+    /// The interface language: a change redraws the texts.
+    let language: String
     @ObservedObject var theme = ThemePrefs.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(tr("Apariencia", "Appearance")).font(.system(size: 13, weight: .semibold))
+            Text(tr("Apariencia", "Appearance", "外観")).font(.system(size: 13, weight: .semibold))
             Picker("", selection: $theme.appearance) {
-                Text(tr("Como macOS", "As macOS")).tag("auto")
-                Text(tr("Claro", "Light")).tag("light")
-                Text(tr("Oscuro", "Dark")).tag("dark")
+                Text(tr("Como macOS", "As macOS", "macOS に合わせる")).tag("auto")
+                Text(tr("Claro", "Light", "ライト")).tag("light")
+                Text(tr("Oscuro", "Dark", "ダーク")).tag("dark")
             }
             .pickerStyle(.segmented).labelsHidden().fixedSize()
-            Text(tr("Color de los botones y del ícono", "Colour of the buttons and the icon"))
+            Text(tr("Color de los botones y del ícono", "Colour of the buttons and the icon", "ボタンとアイコンの色"))
                 .font(.system(size: 13, weight: .semibold)).padding(.top, 6)
             LazyVGrid(columns: Array(repeating: GridItem(.fixed(88), spacing: 8), count: 6), spacing: 12) {
                 ForEach(Accent.all, id: \.key) { a in
@@ -150,7 +152,7 @@ struct ThemeSettings: View {
                 }
             }
             Text(tr("El color se usa en los botones, la selección y el ícono del Dock. El ícono del Finder sigue verde: cambiarlo rompería la firma de la app.",
-                    "The colour is used for the buttons, the selection and the icon in the Dock. The icon in the Finder stays green: changing it would break the app's signature."))
+                    "The colour is used for the buttons, the selection and the icon in the Dock. The icon in the Finder stays green: changing it would break the app's signature.", "この色はボタン、選択範囲、Dock のアイコンに使われます。Finder のアイコンは緑のままです。変えるとアプリの署名が壊れるためです。"))
                 .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Spacer()
         }

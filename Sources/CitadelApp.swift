@@ -29,7 +29,7 @@ struct CitadelApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands { CitadelCommands(lang: lang, model: ChatModel.shared) }
 
-        Window(tr("Acerca de Citadel", "About Citadel"), id: "about") {
+        Window(tr("Acerca de Citadel", "About Citadel", "Citadel について"), id: "about") {
             AboutView()
         }
         .windowResizability(.contentSize)
@@ -47,21 +47,22 @@ struct CitadelCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
             AboutMenuButton()
-            Button(tr("Buscar actualizaciones…", "Check for Updates…")) { SelfUpdate.shared.check(interactive: true) }
+            Button(tr("Buscar actualizaciones…", "Check for Updates…", "アップデートを確認…")) { SelfUpdate.shared.check(interactive: true) }
         }
         CommandGroup(after: .textEditing) {
-            Button(tr("Buscar en las conversaciones", "Search the Conversations")) {
+            Button(tr("Buscar en las conversaciones", "Search the Conversations", "会話を検索")) {
                 NotificationCenter.default.post(name: .citadelFocusSearch, object: nil)
             }
             .keyboardShortcut("f", modifiers: .command)
         }
         CommandGroup(replacing: .newItem) {
-            Button(tr("Conversación nueva", "New Conversation")) { model.newConversation() }
+            Button(tr("Conversación nueva", "New Conversation", "新しい会話")) { model.newConversation() }
                 .keyboardShortcut("n", modifiers: .command)
         }
-        CommandMenu(lang.isSpanish ? "Idioma" : "Language") {
+        CommandMenu(tr("Idioma", "Language", "言語")) {
             Button((lang.language == "en" ? "✓ " : "    ") + "English") { lang.language = "en" }
             Button((lang.language == "es" ? "✓ " : "    ") + "Español") { lang.language = "es" }
+            Button((lang.language == "ja" ? "✓ " : "    ") + "日本語") { lang.language = "ja" }
         }
     }
 }
@@ -70,7 +71,7 @@ struct AboutMenuButton: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Button(tr("Acerca de Citadel", "About Citadel")) {
+        Button(tr("Acerca de Citadel", "About Citadel", "Citadel について")) {
             openWindow(id: "about")
             NSApp.activate(ignoringOtherApps: true)
         }
@@ -136,7 +137,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         up.appName = "Citadel"
         up.repo = "Gabriel-Castiglia/citadel"
         up.version = AppInfo.version
-        up.language = { L10n.shared.isSpanish ? "es" : "en" }
+        up.language = { L10n.shared.language }
         up.readyToQuit = { await ChatModel.shared.readyToQuitForUpdate() }
         up.beforeQuit = { MainActor.assumeIsolated { ChatModel.shared.keepDraftForUpdate() } }
         if !selfTest && screenshot == nil {
@@ -194,7 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch name {
         case "about":
             view = AnyView(AboutView())
-            title = tr("Acerca de Citadel", "About Citadel")
+            title = tr("Acerca de Citadel", "About Citadel", "Citadel について")
         case "settings":
             let main = mainWindow
             NotificationCenter.default.post(name: .citadelOpenSettings, object: nil)

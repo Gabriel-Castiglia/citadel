@@ -181,7 +181,7 @@ enum MemoryStore {
               entries().contains(where: { $0.file == file })
         else {
             throw NSError(domain: "Citadel", code: 1, userInfo: [NSLocalizedDescriptionKey:
-                tr("No se pudo verificar la memoria guardada en el disco.", "Could not verify the saved memory on disk.")])
+                tr("No se pudo verificar la memoria guardada en el disco.", "Could not verify the saved memory on disk.", "保存したメモリをディスク上で確認できませんでした。")])
         }
         return url
     }
@@ -226,7 +226,7 @@ enum MemoryStore {
                                              numPredict: 3000, jsonFormat: true)
         guard let obj = parseJSONObject(text) else {
             throw NSError(domain: "Citadel", code: 2, userInfo: [NSLocalizedDescriptionKey:
-                tr("El modelo no devolvió un JSON válido.", "The model did not return valid JSON.")])
+                tr("El modelo no devolvió un JSON válido.", "The model did not return valid JSON.", "モデルが有効な JSON を返しませんでした。")])
         }
         let file = sanitizeFileName((obj["file"] as? String) ?? "memory")
         var indexLine = ((obj["index_line"] as? String) ?? "").trimmed

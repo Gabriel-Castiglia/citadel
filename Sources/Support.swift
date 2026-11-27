@@ -43,7 +43,9 @@ final class L10n: ObservableObject {
 
     private init() {
         let saved = UserDefaults.standard.string(forKey: "language")
-        language = (saved == "es") ? "es" : "en"
+        // First start: the language of the Mac when Citadel has it (Spanish or Japanese), as on Windows.
+        let system = Locale.preferredLanguages.first.map { String($0.prefix(2)) } ?? "en"
+        language = (saved == "es" || saved == "ja" || saved == "en") ? saved! : (system == "es" || system == "ja") ? system : "en"
         // A `-language` argument (screenshots, tests) applies to this run only.
         let arguments = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
         if arguments["language"] == nil { save() }
@@ -55,16 +57,37 @@ final class L10n: ObservableObject {
     }
 
     var isSpanish: Bool { language == "es" }
+    var isJapanese: Bool { language == "ja" }
+    /// Locale of the interface language, for dates (as Citadel for Windows does).
+    var locale: Locale { Locale(identifier: language == "es" ? "es_ES" : language == "ja" ? "ja_JP" : "en_US") }
 }
 
-/// Returns the Spanish or English text for the current interface language.
-func tr(_ es: String, _ en: String) -> String {
-    L10n.shared.isSpanish ? es : en
+/// Returns the Spanish, English or Japanese text for the current interface language.
+func tr(_ es: String, _ en: String, _ ja: String) -> String {
+    switch L10n.shared.language {
+    case "es": es
+    case "ja": ja
+    default: en
+    }
 }
 
 // MARK: - Paths
 
 enum Paths {
+    /// A path as the windows show it. With --screenshot, a folder given with --data-folder shows as
+    /// ~/Library/Application Support/Citadel, so the pictures of the manuals show the real path (as on Windows).
+    static func shown(_ path: String) -> String {
+        let args = CommandLine.arguments
+        if args.contains("--screenshot"), let i = args.firstIndex(of: "--data-folder"), i + 1 < args.count {
+            let data = URL(fileURLWithPath: (args[i + 1] as NSString).expandingTildeInPath).standardizedFileURL.path
+            let p = URL(fileURLWithPath: path).standardizedFileURL.path
+            if p == data || p.hasPrefix(data + "/") {
+                return "~/Library/Application Support/Citadel" + p.dropFirst(data.count)
+            }
+        }
+        return path.tildePath
+    }
+
     /// `~/Library/Application Support/Citadel`, or the folder given with `--data-folder`
     /// (used for tests, so they never touch the real conversations).
     static var appSupport: URL {
@@ -183,5 +206,13 @@ struct SidebarBlur: NSViewRepresentable {
     func updateNSView(_ v: NSVisualEffectView, context: Context) {
         v.material = material
         v.blendingMode = blending
+    }
+}
+
+extension View {
+    /// The tooltip of a button that shows only an icon, also as the name screen readers such as
+    /// VoiceOver read (they would otherwise read the symbol's name), as Citadel for Windows does.
+    func helpAndLabel(_ text: String) -> some View {
+        help(text).accessibilityLabel(text)
     }
 }
